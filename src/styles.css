@@ -1,0 +1,145 @@
+@import "@fontsource/fraunces/latin-600.css";
+@import "@fontsource/fraunces/latin-500-italic.css";
+@import "@fontsource/ibm-plex-mono/latin-400.css";
+@import "@fontsource/ibm-plex-mono/latin-500.css";
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Fraunces", "Iowan Old Style", Palatino, Georgia, serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --color-carbon: #141210;
+  --color-paper: #f3ecdf;
+  --color-ink: #1c1612;
+  --color-stamp: #a32018;
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  body {
+    overflow-x: hidden;
+    font-family: var(--font-mono);
+    background: var(--color-carbon);
+    color: var(--color-paper);
+    text-rendering: optimizeLegibility;
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+  ::selection {
+    background: var(--color-stamp);
+    color: var(--color-paper);
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-paper);
+    outline-offset: 3px;
+  }
+}
+
+.paper {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  box-shadow: 0 22px 50px color-mix(in oklab, black 55%, transparent);
+}
+
+.paper :focus-visible {
+  outline-color: var(--color-stamp);
+}
+
+.paper-teeth {
+  height: 12px;
+  background: radial-gradient(circle at 8px 0, transparent 8px, var(--color-paper) 8.5px);
+  background-size: 16px 12px;
+  background-repeat: repeat-x;
+}
+
+.tap {
+  transition: scale 150ms ease-out;
+}
+
+.tap:active:not(:disabled) {
+  scale: 0.96;
+}
+
+@keyframes lineIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.lines > li {
+  animation: lineIn 420ms ease-out both;
+}
+
+.lines > li:nth-child(1) { animation-delay: 30ms; }
+.lines > li:nth-child(2) { animation-delay: 90ms; }
+.lines > li:nth-child(3) { animation-delay: 150ms; }
+.lines > li:nth-child(4) { animation-delay: 210ms; }
+.lines > li:nth-child(5) { animation-delay: 270ms; }
+
+@keyframes paperIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.paper-in {
+  animation: paperIn 420ms ease-out both;
+}
+
+@keyframes thud {
+  0% {
+    opacity: 0;
+    transform: rotate(-6deg) scale(1.35);
+  }
+  70% {
+    opacity: 1;
+    transform: rotate(-6deg) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: rotate(-6deg) scale(1);
+  }
+}
+
+.stamp-in {
+  animation: thud 320ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.line-btn:disabled {
+  color: inherit;
+  opacity: 1;
+}
+
+@media (hover: hover) {
+  .line-btn:not(:disabled):hover {
+    background: color-mix(in oklab, var(--color-ink) 5%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lines > li,
+  .paper-in {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+  .stamp-in {
+    animation: none;
+    opacity: 1;
+    transform: rotate(-6deg);
+  }
+}
