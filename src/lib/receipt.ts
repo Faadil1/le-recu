@@ -392,6 +392,11 @@ const CATALOG: readonly Cost[] = [
   },
 ]
 
+/** Public, immutable catalogue identifiers for localization coverage audits. */
+export function catalogCostIds(): string[] {
+  return CATALOG.map((cost) => cost.id)
+}
+
 const DEFAULT_ID: Record<Cat, string> = {
   temps: "dimanches",
   lien: "ami",
