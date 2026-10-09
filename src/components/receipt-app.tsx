@@ -19,6 +19,8 @@ import {
 import { castStrike, readRoom } from "@/lib/room.functions"
 import { createDuel, readDuel, answerDuel } from "@/lib/duel.functions"
 import type { DuelView } from "@/lib/duel-contract"
+import { makeDuplexPoster } from "@/lib/duel-image"
+import { DuplexResult } from "@/components/duplex-result"
 
 const HISTORY_KEY = "lerecu.v1"
 const TOKEN_KEY = "lerecu.token"
@@ -180,6 +182,7 @@ export function ReceiptApp() {
   const [duelRole, setDuelRole] = useState<DuelView["role"]>("guest")
   const [duelStatus, setDuelStatus] = useState<DuelView["status"] | "none">("none")
   const [busy, setBusy] = useState(false)
+  const [posterBusy, setPosterBusy] = useState(false)
   const [duelError, setDuelError] = useState("")
 
   const lines = useMemo(() => (desire ? generateLines(desire, seed) : []), [desire, seed])
@@ -247,14 +250,10 @@ export function ReceiptApp() {
       return
     }
     let cancel = false
-    const run = spectacle
-      ? readRoom({ data: { desire } })
-      : (() => {
-          const token = voterToken()
-          return token
-            ? castStrike({ data: { desire, line: mine, token, seed, issuedAt: createdAt } })
-            : readRoom({ data: { desire } })
-        })()
+    const token = voterToken()
+    const run = token
+      ? castStrike({ data: { desire, line: mine, token, seed, issuedAt: createdAt } })
+      : readRoom({ data: { desire } })
     void run.then((next) => {
       if (!cancel) setRoom(next)
     }).catch(() => {
@@ -263,7 +262,7 @@ export function ReceiptApp() {
     return () => {
       cancel = true
     }
-  }, [booted, mine, desire, seed, createdAt, spectacle])
+  }, [booted, mine, desire, seed, createdAt])
 
   useEffect(() => {
     if (!booted) return
@@ -426,6 +425,39 @@ export function ReceiptApp() {
     }
   }
 
+  async function downloadDuelPoster() {
+    if (mine === null || theirs === null || posterBusy) return
+    setPosterBusy(true)
+    setDuelError("")
+    try {
+      const blob = await makeDuplexPoster({
+        desire, mine: lines[mine]?.label ?? "", theirs: lines[theirs]?.label ?? "",
+        timestamp: createdAt, number: receiptNo(seed),
+      })
+      const file = new File([blob], "le-recu-duplex.png", { type: "image/png" })
+      if (navigator.share && navigator.canShare?.({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file], title: "LE REÇU", text: "Même envie. Deux limites." })
+          return
+        } catch (error) {
+          if (error instanceof DOMException && error.name === "AbortError") return
+        }
+      }
+      const objectUrl = URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      link.href = objectUrl
+      link.download = "le-recu-duplex.png"
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 4000)
+    } catch (error) {
+      setDuelError(error instanceof Error ? error.message : "Le reçu n'a pas pu être exporté.")
+    } finally {
+      setPosterBusy(false)
+    }
+  }
+
   function showDuel() {
     if (mine === null || theirs === null) return
     void share(duelText(desire, lines[theirs]?.label ?? "", lines[mine]?.label ?? ""), "")
@@ -539,23 +571,7 @@ export function ReceiptApp() {
               </div>
             ) : null}
             {reveal ? (
-              <div className="w-full text-center">
-                <p className="text-xs tracking-widest text-stamp">{same ? "MÊME REFUS" : "PAS LA MÊME"}</p>
-                {same ? (
-                  <p className="mt-3 font-display text-xl font-medium italic leading-tight text-balance">{theirLabel}</p>
-                ) : (
-                  <div className="mt-3 grid grid-cols-2">
-                    <div className="border-r border-ink/15 px-2">
-                      <p className="text-xs tracking-widest text-ink/45">EUX</p>
-                      <p className="mt-1 font-display text-lg font-medium italic leading-tight text-balance">{theirLabel}</p>
-                    </div>
-                    <div className="px-2">
-                      <p className="text-xs tracking-widest text-stamp">TOI</p>
-                      <p className="mt-1 font-display text-lg font-medium italic leading-tight text-balance">{myLabel}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
+              <DuplexResult same={same} mine={myLabel} theirs={theirLabel} />
             ) : null}
           </div>
           ) : null}
@@ -596,9 +612,14 @@ export function ReceiptApp() {
           </button>
         ) : null}
         {reveal ? (
-          <button type="button" className="tap h-12 w-full bg-paper text-sm font-medium text-ink" onClick={showDuel}>
-            {spectacle ? "Envoyer le duel" : "Montrer le duel"}
-          </button>
+          <>
+            <button type="button" disabled={posterBusy} className="tap h-12 w-full bg-paper text-sm font-medium text-ink disabled:opacity-50" onClick={() => void downloadDuelPoster()}>
+              {posterBusy ? "Composition…" : "Partager l'image du duo"}
+            </button>
+            <button type="button" className="tap h-12 w-full border border-paper/30 text-sm text-paper" onClick={showDuel}>
+              Copier la confrontation en texte
+            </button>
+          </>
         ) : null}
         {mine !== null && theirs !== null && !spectacle ? (
           <button type="button" className="tap h-12 w-full border border-paper/30 text-sm text-paper" onClick={() => void defy()}>
