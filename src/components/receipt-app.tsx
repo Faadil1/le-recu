@@ -289,7 +289,13 @@ export function ReceiptApp() {
   }, [booted, desire, seed, createdAt, mine, theirs, spectacle])
 
   useEffect(() => {
-    if (booted) document.documentElement.lang=locale
+    if (!booted) return
+    document.documentElement.lang=locale
+    document.title=t(locale).title
+    const description=document.querySelector('meta[name="description"]')
+    description?.setAttribute("content",locale==="fr"
+      ?"Cinq coûts. Tu en barres un. Eux barrent sans voir le tien."
+      :"Five costs. Refuse one. They choose before seeing yours.")
   }, [booted,locale])
 
   function switchLocale(next: Locale) {
