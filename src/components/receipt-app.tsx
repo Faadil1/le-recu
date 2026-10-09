@@ -524,8 +524,8 @@ export function ReceiptApp() {
     return (
       <main className="mx-auto flex min-h-dvh w-full max-w-md items-start px-4 pt-10">
         <div role="status" className="paper w-full px-6 py-10">
-          <p className="font-display text-3xl">LE REÇU</p>
-          <p className="mt-3 text-xs tracking-widest text-ink/60">LE PAPIER SE PRÉPARE…</p>
+          <p className="font-display text-3xl">{words.title}</p>
+          <p className="mt-3 text-xs tracking-widest text-ink/60">{words.loading}</p>
         </div>
       </main>
     )
@@ -533,21 +533,32 @@ export function ReceiptApp() {
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-4 pt-5 pb-12">
-      <p className="text-xs tracking-widest text-paper/50">{kicker}</p>
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs tracking-widest text-paper/50">{kicker}</p>
+        <div role="group" aria-label="Langue / Language" className="flex gap-1" data-language>
+          {(["fr","en"] as const).map((lang) => (
+            <button key={lang} type="button" lang={lang} aria-pressed={locale===lang}
+              onClick={() => switchLocale(lang)}
+              className={`tap min-h-11 min-w-11 border px-3 text-xs tracking-widest ${locale===lang?"border-paper bg-paper text-ink":"border-paper/35 text-paper"}`}>
+              {lang.toUpperCase()}
+            </button>
+          ))}
+        </div>
+      </div>
       {duelError ? <p role="alert" className="mt-3 border border-stamp px-3 py-3 text-sm leading-normal text-paper">{duelError}</p> : null}
       {duelId && duelRole === "owner" && duelStatus === "pending" ? (
-        <p className="mt-3 text-xs text-paper/55">DÉFI EN ATTENTE · validité 72 h · vérifier la réponse ci-dessous</p>
+        <p className="mt-3 text-xs text-paper/55">{words.pending}</p>
       ) : null}
       {duelStatus === "closed" || duelStatus === "expired" ? (
         <p role="status" className="mt-3 text-sm text-paper/70">
-          {duelStatus === "expired" ? "Ce défi a expiré. Imprime un nouveau reçu." : "Ce défi a déjà été répondu depuis un autre navigateur."}
+          {duelStatus === "expired" ? words.expired : words.closed}
         </p>
       ) : null}
 
       <div key={`${desire}-${seed}-${theirs ?? "x"}`} data-receipt className="paper-in mt-3">
         <article className="paper px-4 pt-4 pb-4">
           <header className="flex items-baseline justify-between gap-3">
-            <p className="font-display text-xl font-semibold tracking-wide">LE REÇU</p>
+            <p className="font-display text-xl font-semibold tracking-wide">{words.title}</p>
             <p className="text-xs text-ink/55 tabular-nums">Nº {receiptNo(seed)}</p>
           </header>
           <p className="mt-1 text-xs text-ink/55 tabular-nums">{createdAt > 0 ? formatStamp(createdAt) : "\u00a0"}</p>
@@ -558,7 +569,7 @@ export function ReceiptApp() {
                 : "mt-4 font-display text-3xl font-medium italic leading-tight text-balance break-words"
             }
           >
-            {quote(desire)}
+            {quote(shownDesire,locale)}
           </h1>
           <p className="mt-2 text-sm leading-normal text-pretty text-ink/70">{sub}</p>
           <ul className="lines mt-4 divide-y divide-ink/10">
@@ -569,14 +580,14 @@ export function ReceiptApp() {
                   className="tap line-btn min-h-11 w-full py-3 text-left disabled:opacity-100"
                   disabled={locked || !booted}
                   onClick={() => strike(index)}
-                  aria-label={locked ? undefined : `Refuser de payer ${line.label}`}
+                  aria-label={locked ? undefined : `${words.refuse} ${localizedCost(line,locale).label}`}
                 >
                   <span className="flex items-center justify-between gap-3">
-                    <span className="text-xs tracking-widest text-ink/50">{CAT_LABEL[line.cat]}</span>
+                    <span className="text-xs tracking-widest text-ink/50">{CATEGORY[locale][line.cat]}</span>
                     {line.refused ? (
-                      <span className="text-xs tracking-widest text-stamp">{line.theirs ? "TOI · EUX" : "NON"}</span>
+                      <span className="text-xs tracking-widest text-stamp">{line.theirs ? words.twoMarked : words.no}</span>
                     ) : line.theirs ? (
-                      <span className="text-xs tracking-widest text-stamp">EUX</span>
+                      <span className="text-xs tracking-widest text-stamp">{words.other}</span>
                     ) : room && room.total >= 2 ? (
                       <span className="text-xs tabular-nums text-ink/50">{room.counts[index]}</span>
                     ) : (
@@ -590,9 +601,9 @@ export function ReceiptApp() {
                         : "mt-1 block text-base leading-normal"
                     }
                   >
-                    {line.label}
+                    {localizedCost(line,locale).label}
                   </span>
-                  <span className="mt-1 block text-sm leading-normal text-pretty text-ink/70">{line.detail}</span>
+                  <span className="mt-1 block text-sm leading-normal text-pretty text-ink/70">{localizedCost(line,locale).detail}</span>
                 </button>
               </li>
             ))}
@@ -601,48 +612,48 @@ export function ReceiptApp() {
           <div className="flex items-center justify-center py-4" aria-live="polite">
             {mine === null && theirs !== null ? (
               <p className="max-w-64 text-center text-sm leading-normal text-pretty text-ink/70">
-                Leur ligne est scellée. Barre la tienne.
+                {words.sealedOther}
               </p>
             ) : null}
             {mine !== null && !reveal ? (
               <div className="text-center">
                 <div className="stamp-in mx-auto flex size-24 items-center justify-center rounded-full border-2 border-stamp">
                   <div className="flex size-20 items-center justify-center rounded-full border border-stamp">
-                    <span className="font-display text-3xl font-semibold tracking-widest text-stamp">DÛ</span>
+                    <span className="font-display text-3xl font-semibold tracking-widest text-stamp">{words.stamp}</span>
                   </div>
                 </div>
                 <p className="mt-3 text-sm leading-normal text-ink/70">
-                  Refusé
+                  {words.refused}
                   <span className="mt-1 block font-display text-xl font-medium italic text-ink">{myLabel}</span>
                 </p>
               </div>
             ) : null}
             {reveal ? (
-              <DuplexResult same={same} mine={myLabel} theirs={theirLabel} />
+              <DuplexResult same={same} mine={myLabel} theirs={theirLabel} locale={locale} />
             ) : null}
           </div>
           ) : null}
           {room && mine !== null && deckDesire(desire) ? (
             <div className="pt-3 text-center">
               {room.total < 2 ? (
-                <p className="text-xs tracking-widest text-ink/45">LA SALLE EST VIDE</p>
+                <p className="text-xs tracking-widest text-ink/45">{words.empty}</p>
               ) : room.top === null ? (
-                <p className="text-sm leading-normal text-ink/70">{room.total} refus. Aucune ligne ne mène.</p>
+                <p className="text-sm leading-normal text-ink/70">{words.tie(room.total)}</p>
               ) : (
                 <>
-                  <p className="text-xs tracking-widest text-ink/45">LA SALLE</p>
+                  <p className="text-xs tracking-widest text-ink/45">{words.room}</p>
                   <p className="mt-1 font-display text-lg font-medium italic leading-tight text-balance">
-                    {lines[room.top]?.label}
+                    {lines[room.top] ? localizedCost(lines[room.top],locale).label : ""}
                   </p>
                   <p className="mt-1 text-xs tabular-nums text-ink/55">
-                    {room.counts[room.top]} sur {room.total}
+                    {words.of(room.counts[room.top],room.total)}
                   </p>
                 </>
               )}
             </div>
           ) : null}
           <Rule seed={seed} />
-          <p className="mt-4 text-center text-xs tracking-widest text-ink/40">PAS UN CONSEIL · UN PRIX</p>
+          <p className="mt-4 text-center text-xs tracking-widest text-ink/40">{words.signoff}</p>
         </article>
         <div className="paper-teeth" aria-hidden="true" />
       </div>
