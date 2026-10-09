@@ -502,11 +502,17 @@ export const DECK = [
   "quitter",
 ] as const
 
+export function dailySeedFor(desire: string, now = Date.now()): number {
+  const date = new Date(now)
+  const day = Math.floor(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()) / 86_400_000)
+  return hashString(`${fold(desire)}:${day}`)
+}
+
 export function dailyReceipt(now = Date.now()): { desire: string; seed: number } {
   const date = new Date(now)
   const day = Math.floor(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()) / 86_400_000)
   const desire = DECK[day % DECK.length] ?? DECK[0]
-  return { desire, seed: hashString(`${fold(desire)}:${day}`) }
+  return { desire, seed: dailySeedFor(desire, now) }
 }
 
 export function deckDesire(value: string): string | null {
@@ -542,12 +548,14 @@ export function tallyRoom(rows: readonly { line: number; n: number }[]): RoomTal
   return { total, counts, top }
 }
 
-export function challengeText(desire: string, room?: { mine: string; salle?: string }): string {
-  const head = ["LE REÇU", `« ${desire} »`, ""]
-  if (!room) return [...head, "Cinq coûts. J'en ai barré un.", "", "Toi, tu barres quoi ?"].join("\n")
-  const body = [`moi — ${room.mine}`]
-  if (room.salle) body.push(room.salle)
-  return [...head, ...body, "", "Toi, tu barres quoi ?"].join("\n")
+/** A teaser may NEVER disclose the creator's refused cost. */
+export function challengeText(desire: string): string {
+  return [
+    "LE REÇU", `« ${desire} »`,
+    "", "Cinq coûts. J'en ai refusé un.",
+    "Tu choisis sans voir ma ligne.",
+    "", "Toi, tu barres quoi ?",
+  ].join("\n")
 }
 
 export function duelText(desire: string, theirs: string, yours: string): string {
