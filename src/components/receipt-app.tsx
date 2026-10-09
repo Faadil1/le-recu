@@ -1,13 +1,10 @@
 import { useEffect, useMemo, useState } from "react"
 import {
-  CAT_LABEL,
   DECK,
-  challengeText,
   cleanDesire,
   dailyReceipt,
   dailySeedFor,
   deckDesire,
-  duelText,
   fold,
   formatStamp,
   generateLines,
@@ -21,9 +18,21 @@ import { createDuel, readDuel, answerDuel } from "@/lib/duel.functions"
 import type { DuelView } from "@/lib/duel-contract"
 import { makeDuplexPoster } from "@/lib/duel-image"
 import { DuplexResult } from "@/components/duplex-result"
+import { CATEGORY, challengeCopy, duelCopy, localizedCost, localizedDesire, localizedServerError, parseLocale, t, type Locale } from "@/lib/locale"
 
 const HISTORY_KEY = "lerecu.v1"
 const TOKEN_KEY = "lerecu.token"
+const LOCALE_KEY = "lerecu.locale.v1"
+
+function preferredLocale(): Locale {
+  const query = parseLocale(new URLSearchParams(location.search).get("lang"))
+  if (query) return query
+  try {
+    const stored = parseLocale(localStorage.getItem(LOCALE_KEY))
+    if (stored) return stored
+  } catch { /* optional */ }
+  return navigator.language?.toLowerCase().startsWith("en") ? "en" : "fr"
+}
 
 function voterToken(): string | null {
   try {
@@ -49,8 +58,8 @@ type Live = {
   show: boolean
 }
 
-function quote(value: string): string {
-  return `«\u00a0${value}\u00a0»`
+function quote(value: string,locale:Locale):string {
+  return locale==="en"?`“${value}”`:`«\u00a0${value}\u00a0»`
 }
 
 function isSaved(value: unknown): value is Saved {
@@ -136,9 +145,10 @@ function setDuelUrl(id: string | null) {
   history.replaceState(null, "", url.pathname + url.search)
 }
 
-function duelUrl(id: string) {
+function duelUrl(id: string, locale: Locale) {
   const url = new URL(location.href)
   url.searchParams.set("duel", id)
+  url.searchParams.set("lang",locale)
   url.searchParams.delete("_vercel_share")
   url.hash = ""
   return url.toString()
@@ -184,6 +194,7 @@ export function ReceiptApp() {
   const [duelId, setDuelId] = useState<string | null>(null)
   const [duelRole, setDuelRole] = useState<DuelView["role"]>("guest")
   const [duelStatus, setDuelStatus] = useState<DuelView["status"] | "none">("none")
+  const [locale, setLocale] = useState<Locale>("fr")
   const [busy, setBusy] = useState(false)
   const [busyAction, setBusyAction] = useState<"seal" | "share" | "check" | "reply" | null>(null)
   const [responseChecked, setResponseChecked] = useState(false)
@@ -193,25 +204,28 @@ export function ReceiptApp() {
   const lines = useMemo(() => (desire ? generateLines(desire, seed) : []), [desire, seed])
   const reveal = spectacle || (mine !== null && theirs !== null)
   const shown = useMemo(() => present(lines, mine, theirs, reveal), [lines, mine, theirs, reveal])
-  const myLabel = mine !== null ? lines[mine]?.label ?? "" : ""
-  const theirLabel = theirs !== null && reveal ? lines[theirs]?.label ?? "" : ""
+  const words=t(locale)
+  const shownDesire=localizedDesire(desire,locale)
+  const myLabel=mine!==null&&lines[mine]?localizedCost(lines[mine],locale).label:""
+  const theirLabel=theirs!==null&&reveal&&lines[theirs]?localizedCost(lines[theirs],locale).label:""
   const same = reveal && mine !== null && mine === theirs
 
   useEffect(() => {
     let cancelled = false
     async function boot() {
       setHistoryRows(loadHistory())
+      setLocale(preferredLocale())
       const id = duelFromUrl()
       const token = voterToken()
       if (id) {
         if (!token) {
-          setDuelError("Ce navigateur ne peut pas conserver son jeton de participation.")
+          setDuelError(t(preferredLocale()).storage)
         } else {
           try {
             const view = await readDuel({ data: { id, token } })
             if (cancelled) return
             if (view.status === "missing") {
-              setDuelError("Ce défi n'existe pas.")
+              setDuelError(t(preferredLocale()).missing)
             } else {
               setDuelId(id)
               setDuelRole(view.role)
@@ -224,7 +238,7 @@ export function ReceiptApp() {
               setSpectacle(view.status === "complete")
             }
           } catch (error) {
-            if (!cancelled) setDuelError(error instanceof Error ? error.message : "Défi indisponible.")
+            if (!cancelled) setDuelError(error instanceof Error ? localizedServerError(error.message,preferredLocale()) : t(preferredLocale()).unavailable)
           }
         }
       } else {
@@ -275,6 +289,18 @@ export function ReceiptApp() {
   }, [booted, desire, seed, createdAt, mine, theirs, spectacle])
 
   useEffect(() => {
+    if (booted) document.documentElement.lang=locale
+  }, [booted,locale])
+
+  function switchLocale(next: Locale) {
+    setLocale(next)
+    try {localStorage.setItem(LOCALE_KEY,next)} catch { /* optional */ }
+    const url=new URL(location.href)
+    url.searchParams.set("lang",next)
+    history.replaceState(null,"",url.pathname+url.search+url.hash)
+  }
+
+  useEffect(() => {
     if (copied !== "ok") return
     const id = window.setTimeout(() => setCopied("idle"), 1600)
     return () => window.clearTimeout(id)
@@ -311,7 +337,7 @@ export function ReceiptApp() {
       if (duelRole !== "guest" || duelStatus !== "pending") return
       const token = voterToken()
       if (!token) {
-        setDuelError("La participation requiert un navigateur qui conserve les données locales.")
+        setDuelError(words.storage)
         return
       }
       setBusy(true)
@@ -319,7 +345,7 @@ export function ReceiptApp() {
       setDuelError("")
       try {
         const view = await answerDuel({ data: { id: duelId, line: index, token } })
-        if (view.status !== "complete") throw new Error("Le reçu attend encore une deuxième décision.")
+        if (view.status !== "complete") throw new Error(words.errorReceipt)
         setMine(view.mine)
         setTheirs(view.theirs)
         setSpectacle(true)
@@ -327,7 +353,7 @@ export function ReceiptApp() {
         setDuelStatus(view.status)
         setHistoryRows(pushHistory({ d: desire, s: seed, x: index, t: createdAt }))
       } catch (error) {
-        setDuelError(error instanceof Error ? error.message : "Impossible de répondre au défi.")
+        setDuelError(error instanceof Error ? localizedServerError(error.message,locale) : words.errorReply)
       } finally {
         setBusy(false)
         setBusyAction(null)
@@ -386,7 +412,7 @@ export function ReceiptApp() {
     if (mine === null || busy) return
     const token = voterToken()
     if (!token) {
-      setDuelError("Ce navigateur ne peut pas enregistrer ta participation.")
+      setDuelError(words.storage)
       return
     }
     setBusy(true)
@@ -406,11 +432,11 @@ export function ReceiptApp() {
         // A newly created challenge has no recipient until the owner sends it.
         return
       }
-      const url = duelUrl(id)
+      const url = duelUrl(id,locale)
       if (copyOnly) await writeShare("", url)
-      else await share(challengeText(desire), url)
+      else await share(challengeCopy(desire,locale), url)
     } catch (error) {
-      setDuelError(error instanceof Error ? error.message : "Le défi n'a pas pu être créé.")
+      setDuelError(error instanceof Error ? localizedServerError(error.message,locale) : words.errorCreate)
     } finally {
       setBusy(false)
       setBusyAction(null)
@@ -436,7 +462,7 @@ export function ReceiptApp() {
         setSpectacle(true)
       }
     } catch (error) {
-      setDuelError(error instanceof Error ? error.message : "Impossible de vérifier le défi.")
+      setDuelError(error instanceof Error ? localizedServerError(error.message,locale) : words.errorCheck)
     } finally {
       setBusy(false)
       setBusyAction(null)
@@ -449,13 +475,13 @@ export function ReceiptApp() {
     setDuelError("")
     try {
       const blob = await makeDuplexPoster({
-        desire, mine: lines[mine]?.label ?? "", theirs: lines[theirs]?.label ?? "",
+        desire:shownDesire,mine:myLabel,theirs:theirLabel,locale,
         timestamp: createdAt, number: receiptNo(seed),
       })
       const file = new File([blob], "le-recu-duplex.png", { type: "image/png" })
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
         try {
-          await navigator.share({ files: [file], title: "LE REÇU", text: "Même envie. Deux limites." })
+          await navigator.share({ files: [file], title:words.title,text:words.invitation })
           return
         } catch (error) {
           if (error instanceof DOMException && error.name === "AbortError") return
@@ -470,7 +496,7 @@ export function ReceiptApp() {
       link.remove()
       window.setTimeout(() => URL.revokeObjectURL(objectUrl), 4000)
     } catch (error) {
-      setDuelError(error instanceof Error ? error.message : "Le reçu n'a pas pu être exporté.")
+      setDuelError(error instanceof Error ? localizedServerError(error.message,locale) : words.errorExport)
     } finally {
       setPosterBusy(false)
     }
@@ -478,27 +504,19 @@ export function ReceiptApp() {
 
   function showDuel() {
     if (mine === null || theirs === null) return
-    void share(duelText(desire, lines[theirs]?.label ?? "", lines[mine]?.label ?? ""), "")
+    void share(duelCopy(desire,theirLabel,myLabel,locale),"")
   }
 
   const sub = reveal
-    ? "Deux décisions indépendantes. Un seul papier."
+    ? words.revealed
     : duelId && duelRole === "guest" && duelStatus === "pending"
-      ? "Quelqu'un a déjà refusé un coût. Choisis sans voir lequel."
-      : duelId && duelRole === "owner"
-        ? "Ton choix est enregistré. L'autre personne ne le verra qu'après avoir décidé."
-        : mine !== null
-          ? "Ton choix est fait. Le défi reste à envoyer."
-          : "Cinq coûts. Tu en refuses un. Ensuite tu défies."
+      ? words.hidden
+      : duelId && duelRole === "owner" ? words.owner
+        : mine !== null ? words.decided : words.intro
   const kicker = reveal
-    ? same
-      ? "MÊME REFUS"
-      : "PAS LA MÊME LIGNE"
+    ? same ? words.kickerSame : words.kickerDifferent
     : duelId && duelRole === "guest" && duelStatus === "pending"
-      ? "DÉFI À L'AVEUGLE"
-      : mine !== null
-        ? "ENVOIE-LE"
-        : "AUJOURD'HUI"
+      ? words.kickerBlind : mine !== null ? words.kickerReady : words.kickerToday
 
   const locked = mine !== null || spectacle || busy || (duelId !== null && duelStatus !== "pending")
 
