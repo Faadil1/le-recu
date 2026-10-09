@@ -392,6 +392,9 @@ export function ReceiptApp() {
         setDuelStatus("pending")
         setCreatedAt(view.createdAt)
         setDuelUrl(id)
+        // A second explicit tap preserves mobile user activation for Web Share.
+        // A newly created challenge has no recipient until the owner sends it.
+        return
       }
       const url = duelUrl(id)
       if (copyOnly) await writeShare(challengeText(desire), url)
@@ -476,10 +479,10 @@ export function ReceiptApp() {
     ? same
       ? "MÊME REFUS"
       : "PAS LA MÊME LIGNE"
-    : mine !== null
-      ? "ENVOIE-LE"
-      : theirs !== null
-        ? "DÉFI"
+    : duelId && duelRole === "guest" && duelStatus === "pending"
+      ? "DÉFI À L'AVEUGLE"
+      : mine !== null
+        ? "ENVOIE-LE"
         : "AUJOURD'HUI"
 
   const locked = mine !== null || spectacle || busy || (duelId !== null && duelStatus !== "pending")
@@ -614,7 +617,7 @@ export function ReceiptApp() {
       <div data-actions className="mt-6 flex flex-col gap-3">
         {mine !== null && theirs === null ? (
           <button type="button" disabled={busy} className="tap h-12 w-full bg-paper text-sm font-medium text-ink disabled:opacity-50" onClick={() => void defy()}>
-            {busy ? "Préparation…" : duelId ? "Renvoyer le défi" : "Défier"}
+            {busy ? "Préparation…" : duelId ? "Envoyer le défi" : "Sceller mon choix"}
           </button>
         ) : null}
         {duelId && duelRole === "owner" && duelStatus === "pending" ? (
@@ -642,13 +645,11 @@ export function ReceiptApp() {
             À mon tour
           </button>
         ) : null}
-        {mine !== null && theirs === null ? (
+        {mine !== null && theirs === null && duelId ? (
           <button
             type="button"
             className="tap h-12 w-full border border-paper/30 text-sm text-paper"
-            onClick={() => {
-              void defy(true)
-            }}
+            onClick={() => void defy(true)}
           >
             Copier le défi
           </button>
