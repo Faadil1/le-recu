@@ -74,7 +74,8 @@ export const createDuel = createServerFn({ method: "POST" })
     }, data.token, createdAt)
   })
 
-export const readDuel = createServerFn({ method: "GET" })
+// A browser participation token is a bearer credential. Never serialize it into a GET URL.
+export const readDuel = createServerFn({ method: "POST" })
   .validator(z.object({ id: idRule, token: tokenRule }))
   .handler(async ({ data }): Promise<DuelView> => {
     const record = await find(data.id)
