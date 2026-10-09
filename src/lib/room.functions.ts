@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start"
 import { z } from "zod"
-import { deckDesire, tallyRoom, type RoomTally } from "@/lib/receipt"
+import { dailySeedFor, deckDesire, tallyRoom, type RoomTally } from "@/lib/receipt"
 
 const empty: RoomTally = { total: 0, counts: [0, 0, 0, 0, 0], top: null }
 
@@ -36,14 +36,21 @@ export const castStrike = createServerFn({ method: "POST" })
       desire: z.string().max(72),
       line: z.number().int().min(0).max(4),
       token: z.string().regex(/^[a-f0-9]{32}$/),
+      seed: z.number().int().min(0).max(0xffffffff),
+      issuedAt: z.number().int().min(1_577_836_800_000).max(4_102_444_800_000),
     }),
   )
   .handler(async ({ data }): Promise<RoomTally> => {
     const desire = deckDesire(data.desire)
     if (!desire) return empty
+    // Prevent yesterday's challenge or an alternative random catalogue
+    // being counted under today's visible labels.
+    const day = utcDay()
+    if (utcDay(data.issuedAt) !== day || dailySeedFor(desire, data.issuedAt) !== data.seed) {
+      return countsFor(desire)
+    }
     const { getSql } = await import("@/lib/db")
     const sql = await getSql()
-    const day = utcDay()
     await sql`
       insert into strikes (day, desire, line, token)
       values (${day}, ${desire}, ${data.line}, ${data.token})
