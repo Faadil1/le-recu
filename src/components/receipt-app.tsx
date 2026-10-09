@@ -130,6 +130,8 @@ function setDuelUrl(id: string | null) {
   const url = new URL(location.href)
   if (id) url.searchParams.set("duel", id)
   else url.searchParams.delete("duel")
+  // A temporary Vercel Preview access grant must never be carried into public challenge URLs.
+  url.searchParams.delete("_vercel_share")
   url.hash = ""
   history.replaceState(null, "", url.pathname + url.search)
 }
@@ -137,6 +139,7 @@ function setDuelUrl(id: string | null) {
 function duelUrl(id: string) {
   const url = new URL(location.href)
   url.searchParams.set("duel", id)
+  url.searchParams.delete("_vercel_share")
   url.hash = ""
   return url.toString()
 }
@@ -182,6 +185,8 @@ export function ReceiptApp() {
   const [duelRole, setDuelRole] = useState<DuelView["role"]>("guest")
   const [duelStatus, setDuelStatus] = useState<DuelView["status"] | "none">("none")
   const [busy, setBusy] = useState(false)
+  const [busyAction, setBusyAction] = useState<"seal" | "share" | "check" | "reply" | null>(null)
+  const [responseChecked, setResponseChecked] = useState(false)
   const [posterBusy, setPosterBusy] = useState(false)
   const [duelError, setDuelError] = useState("")
 
@@ -281,6 +286,7 @@ export function ReceiptApp() {
     setDuelRole("guest")
     setDuelStatus("none")
     setDuelError("")
+    setResponseChecked(false)
     setDuelUrl(null)
   }
 
@@ -309,6 +315,7 @@ export function ReceiptApp() {
         return
       }
       setBusy(true)
+      setBusyAction("reply")
       setDuelError("")
       try {
         const view = await answerDuel({ data: { id: duelId, line: index, token } })
@@ -323,6 +330,7 @@ export function ReceiptApp() {
         setDuelError(error instanceof Error ? error.message : "Impossible de répondre au défi.")
       } finally {
         setBusy(false)
+        setBusyAction(null)
       }
       return
     }
@@ -350,7 +358,8 @@ export function ReceiptApp() {
   }
 
   async function writeShare(text: string, url: string) {
-    const block = url ? `${text}\n${url}` : text
+    // A copied invite should paste directly into a browser's address field.
+    const block = text && url ? `${text}\n${url}` : url || text
     try {
       await navigator.clipboard.writeText(block)
       setCopied("ok")
@@ -381,6 +390,7 @@ export function ReceiptApp() {
       return
     }
     setBusy(true)
+    setBusyAction(duelId ? "share" : "seal")
     setDuelError("")
     try {
       let id = duelId
@@ -397,12 +407,13 @@ export function ReceiptApp() {
         return
       }
       const url = duelUrl(id)
-      if (copyOnly) await writeShare(challengeText(desire), url)
+      if (copyOnly) await writeShare("", url)
       else await share(challengeText(desire), url)
     } catch (error) {
       setDuelError(error instanceof Error ? error.message : "Le défi n'a pas pu être créé.")
     } finally {
       setBusy(false)
+      setBusyAction(null)
     }
   }
 
@@ -411,11 +422,14 @@ export function ReceiptApp() {
     const token = voterToken()
     if (!token) return
     setBusy(true)
+    setBusyAction("check")
+    setResponseChecked(false)
     setDuelError("")
     try {
       const view = await readDuel({ data: { id: duelId, token } })
       setDuelRole(view.role)
       setDuelStatus(view.status)
+      setResponseChecked(view.status === "pending")
       if (view.status === "complete") {
         setMine(view.mine)
         setTheirs(view.theirs)
@@ -425,6 +439,7 @@ export function ReceiptApp() {
       setDuelError(error instanceof Error ? error.message : "Impossible de vérifier le défi.")
     } finally {
       setBusy(false)
+      setBusyAction(null)
     }
   }
 
@@ -617,13 +632,18 @@ export function ReceiptApp() {
       <div data-actions className="mt-6 flex flex-col gap-3">
         {mine !== null && theirs === null ? (
           <button type="button" disabled={busy} className="tap h-12 w-full bg-paper text-sm font-medium text-ink disabled:opacity-50" onClick={() => void defy()}>
-            {busy ? "Préparation…" : duelId ? "Envoyer le défi" : "Sceller mon choix"}
+            {busy && busyAction === "share" ? "Partage en cours…" : busy && busyAction === "seal" ? "Scellement…" : duelId ? "Envoyer le défi" : "Sceller mon choix"}
           </button>
         ) : null}
         {duelId && duelRole === "owner" && duelStatus === "pending" ? (
           <button type="button" disabled={busy} className="tap h-12 w-full border border-paper/30 text-sm text-paper disabled:opacity-50" onClick={() => void checkResponse()}>
-            {busy ? "Vérification…" : "Vérifier la réponse"}
+            {busyAction === "check" ? "Vérification…" : "Vérifier la réponse"}
           </button>
+        ) : null}
+        {responseChecked && duelRole === "owner" && duelStatus === "pending" ? (
+          <p role="status" className="text-center text-sm text-paper/70">
+            Toujours en attente de l’autre personne. Ton défi reste actif pendant 72 h après sa création.
+          </p>
         ) : null}
         {reveal ? (
           <>
@@ -651,7 +671,7 @@ export function ReceiptApp() {
             className="tap h-12 w-full border border-paper/30 text-sm text-paper"
             onClick={() => void defy(true)}
           >
-            Copier le défi
+            Copier le lien uniquement
           </button>
         ) : null}
         {reveal ? (
@@ -668,7 +688,7 @@ export function ReceiptApp() {
             Copier le duel
           </button>
         ) : null}
-        {copied === "ok" ? <p className="text-center text-sm text-paper/70">Copié. Envoie-le.</p> : null}
+        {copied === "ok" ? <p role="status" className="text-center text-sm text-paper/70">Copié dans le presse-papiers.</p> : null}
         {copied === "fail" ? (
           <pre className="overflow-x-auto text-xs leading-normal whitespace-pre-wrap text-paper/75">{shareBlock}</pre>
         ) : null}
