@@ -5,20 +5,20 @@ import {
   challengeText,
   cleanDesire,
   dailyReceipt,
+  dailySeedFor,
   deckDesire,
-  decodePayload,
   duelText,
-  encodePayload,
   fold,
   formatStamp,
   generateLines,
   hashString,
   present,
   receiptNo,
-  type Payload,
   type RoomTally,
 } from "@/lib/receipt"
 import { castStrike, readRoom } from "@/lib/room.functions"
+import { createDuel, readDuel, answerDuel } from "@/lib/duel.functions"
+import type { DuelView } from "@/lib/duel-contract"
 
 const HISTORY_KEY = "lerecu.v1"
 const TOKEN_KEY = "lerecu.token"
@@ -120,26 +120,23 @@ function saveLive(live: Live) {
   }
 }
 
-function readHash(): Payload | null {
-  const code = location.hash.replace(/^#/, "")
-  if (!code) return null
-  try {
-    return decodePayload(decodeURIComponent(code))
-  } catch {
-    return decodePayload(code)
-  }
+function duelFromUrl(): string | null {
+  return new URLSearchParams(location.search).get("duel")
 }
 
-function setHash(code: string) {
-  history.replaceState(null, "", `${location.pathname}${location.search}#${code}`)
+function setDuelUrl(id: string | null) {
+  const url = new URL(location.href)
+  if (id) url.searchParams.set("duel", id)
+  else url.searchParams.delete("duel")
+  url.hash = ""
+  history.replaceState(null, "", url.pathname + url.search)
 }
 
-function clearHash() {
-  history.replaceState(null, "", `${location.pathname}${location.search}`)
-}
-
-function pageUrl(payload: Payload): string {
-  return `${location.origin}${location.pathname}${location.search}#${encodePayload(payload)}`
+function duelUrl(id: string) {
+  const url = new URL(location.href)
+  url.searchParams.set("duel", id)
+  url.hash = ""
+  return url.toString()
 }
 
 function Bars({ weight }: { weight: 1 | 2 | 3 }) {
@@ -179,6 +176,11 @@ export function ReceiptApp() {
   const [copied, setCopied] = useState<"idle" | "ok" | "fail">("idle")
   const [shareBlock, setShareBlock] = useState("")
   const [room, setRoom] = useState<RoomTally | null>(null)
+  const [duelId, setDuelId] = useState<string | null>(null)
+  const [duelRole, setDuelRole] = useState<DuelView["role"]>("guest")
+  const [duelStatus, setDuelStatus] = useState<DuelView["status"] | "none">("none")
+  const [busy, setBusy] = useState(false)
+  const [duelError, setDuelError] = useState("")
 
   const lines = useMemo(() => (desire ? generateLines(desire, seed) : []), [desire, seed])
   const reveal = spectacle || (mine !== null && theirs !== null)
@@ -188,50 +190,59 @@ export function ReceiptApp() {
   const same = reveal && mine !== null && mine === theirs
 
   useEffect(() => {
-    function applyPayload(payload: Payload) {
-      setDesire(payload.d)
-      setSeed(payload.s)
-      setCreatedAt(payload.t)
-      setTheirs(payload.a)
-      setCopied("idle")
-      if (payload.b !== undefined) {
-        setMine(payload.b)
-        setSpectacle(true)
+    let cancelled = false
+    async function boot() {
+      setHistoryRows(loadHistory())
+      const id = duelFromUrl()
+      const token = voterToken()
+      if (id) {
+        if (!token) {
+          setDuelError("Ce navigateur ne peut pas conserver son jeton de participation.")
+        } else {
+          try {
+            const view = await readDuel({ data: { id, token } })
+            if (cancelled) return
+            if (view.status === "missing") {
+              setDuelError("Ce défi n'existe pas.")
+            } else {
+              setDuelId(id)
+              setDuelRole(view.role)
+              setDuelStatus(view.status)
+              setDesire(view.desire)
+              setSeed(view.seed)
+              setCreatedAt(view.createdAt)
+              setMine(view.mine)
+              setTheirs(view.theirs)
+              setSpectacle(view.status === "complete")
+            }
+          } catch (error) {
+            if (!cancelled) setDuelError(error instanceof Error ? error.message : "Défi indisponible.")
+          }
+        }
       } else {
-        setMine(null)
-        setSpectacle(false)
+        const live = loadLive()
+        if (live && cleanDesire(live.d).length >= 2) {
+          setDesire(live.d)
+          setSeed(live.s)
+          setCreatedAt(live.t)
+          setMine(live.mine)
+          setTheirs(live.theirs)
+          setSpectacle(live.show)
+        } else {
+          setCreatedAt(Date.now())
+        }
       }
+      if (!cancelled) setBooted(true)
     }
-
-    setHistoryRows(loadHistory())
-    const payload = readHash()
-    if (payload) {
-      applyPayload(payload)
-    } else {
-      const live = loadLive()
-      if (live && cleanDesire(live.d).length >= 2) {
-        setDesire(live.d)
-        setSeed(live.s)
-        setCreatedAt(live.t)
-        setMine(live.mine)
-        setTheirs(live.theirs)
-        setSpectacle(live.show)
-      } else {
-        setCreatedAt(Date.now())
-      }
-    }
-    setBooted(true)
-
-    function onHash() {
-      const next = readHash()
-      if (next) applyPayload(next)
-    }
-    window.addEventListener("hashchange", onHash)
-    return () => window.removeEventListener("hashchange", onHash)
+    void boot()
+    return () => { cancelled = true }
   }, [])
 
   useEffect(() => {
-    if (!booted || mine === null || !deckDesire(desire)) {
+    const today = new Date().toISOString().slice(0, 10)
+    const issuedDay = createdAt > 0 ? new Date(createdAt).toISOString().slice(0, 10) : ""
+    if (!booted || mine === null || !deckDesire(desire) ||
+        dailySeedFor(desire) !== seed || today !== issuedDay) {
       setRoom(null)
       return
     }
@@ -240,7 +251,9 @@ export function ReceiptApp() {
       ? readRoom({ data: { desire } })
       : (() => {
           const token = voterToken()
-          return token ? castStrike({ data: { desire, line: mine, token } }) : readRoom({ data: { desire } })
+          return token
+            ? castStrike({ data: { desire, line: mine, token, seed, issuedAt: createdAt } })
+            : readRoom({ data: { desire } })
         })()
     void run.then((next) => {
       if (!cancel) setRoom(next)
@@ -250,7 +263,7 @@ export function ReceiptApp() {
     return () => {
       cancel = true
     }
-  }, [booted, mine, desire, spectacle])
+  }, [booted, mine, desire, seed, createdAt, spectacle])
 
   useEffect(() => {
     if (!booted) return
@@ -263,11 +276,20 @@ export function ReceiptApp() {
     return () => window.clearTimeout(id)
   }, [copied])
 
+
+  function resetDuel() {
+    setDuelId(null)
+    setDuelRole("guest")
+    setDuelStatus("none")
+    setDuelError("")
+    setDuelUrl(null)
+  }
+
   function issue(raw: string) {
     const next = cleanDesire(raw)
     if (next.length < 2) return
     setDesire(next)
-    setSeed(hashString(fold(next)))
+    setSeed(deckDesire(next) ? dailySeedFor(next) : hashString(fold(next)))
     setCreatedAt(Date.now())
     setMine(null)
     setTheirs(null)
@@ -275,14 +297,38 @@ export function ReceiptApp() {
     setDraft("")
     setCustomOpen(false)
     setCopied("idle")
-    clearHash()
+    resetDuel()
   }
 
-  function strike(index: number) {
-    if (mine !== null || spectacle) return
+  async function strike(index: number) {
+    if (mine !== null || spectacle || busy) return
+    if (duelId) {
+      if (duelRole !== "guest" || duelStatus !== "pending") return
+      const token = voterToken()
+      if (!token) {
+        setDuelError("La participation requiert un navigateur qui conserve les données locales.")
+        return
+      }
+      setBusy(true)
+      setDuelError("")
+      try {
+        const view = await answerDuel({ data: { id: duelId, line: index, token } })
+        if (view.status !== "complete") throw new Error("Le reçu attend encore une deuxième décision.")
+        setMine(view.mine)
+        setTheirs(view.theirs)
+        setSpectacle(true)
+        setDuelRole(view.role)
+        setDuelStatus(view.status)
+        setHistoryRows(pushHistory({ d: desire, s: seed, x: index, t: createdAt }))
+      } catch (error) {
+        setDuelError(error instanceof Error ? error.message : "Impossible de répondre au défi.")
+      } finally {
+        setBusy(false)
+      }
+      return
+    }
     setMine(index)
     setHistoryRows(pushHistory({ d: desire, s: seed, x: index, t: createdAt || Date.now() }))
-    if (theirs !== null) setHash(encodePayload({ d: desire, s: seed, t: createdAt, a: theirs, b: index }))
   }
 
   function playMine() {
@@ -290,7 +336,7 @@ export function ReceiptApp() {
     setTheirs(null)
     setSpectacle(false)
     setCopied("idle")
-    clearHash()
+    resetDuel()
   }
 
   function openSaved(item: Saved) {
@@ -301,11 +347,11 @@ export function ReceiptApp() {
     setTheirs(null)
     setSpectacle(false)
     setCopied("idle")
-    clearHash()
+    resetDuel()
   }
 
   async function writeShare(text: string, url: string) {
-    const block = `${text}\n${url}`
+    const block = url ? `${text}\n${url}` : text
     try {
       await navigator.clipboard.writeText(block)
       setCopied("ok")
@@ -319,7 +365,7 @@ export function ReceiptApp() {
   async function share(text: string, url: string) {
     if (navigator.share) {
       try {
-        await navigator.share({ title: "LE REÇU", text, url })
+        await navigator.share(url ? { title: "LE REÇU", text, url } : { title: "LE REÇU", text })
         return
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") return
@@ -328,32 +374,72 @@ export function ReceiptApp() {
     await writeShare(text, url)
   }
 
-  function salleLine(): string | undefined {
-    if (!room || room.top === null) return undefined
-    const label = lines[room.top]?.label
-    if (!label) return undefined
-    return `la salle — ${label} (${room.counts[room.top]} sur ${room.total})`
+  async function defy(copyOnly = false) {
+    if (mine === null || busy) return
+    const token = voterToken()
+    if (!token) {
+      setDuelError("Ce navigateur ne peut pas enregistrer ta participation.")
+      return
+    }
+    setBusy(true)
+    setDuelError("")
+    try {
+      let id = duelId
+      if (!id) {
+        const view = await createDuel({ data: { desire, seed, line: mine, token } })
+        id = view.id
+        setDuelId(id)
+        setDuelRole("owner")
+        setDuelStatus("pending")
+        setCreatedAt(view.createdAt)
+        setDuelUrl(id)
+      }
+      const url = duelUrl(id)
+      if (copyOnly) await writeShare(challengeText(desire), url)
+      else await share(challengeText(desire), url)
+    } catch (error) {
+      setDuelError(error instanceof Error ? error.message : "Le défi n'a pas pu être créé.")
+    } finally {
+      setBusy(false)
+    }
   }
 
-  function defy() {
-    if (mine === null) return
-    const payload: Payload = { d: desire, s: seed, t: createdAt, a: mine }
-    void share(challengeText(desire, { mine: myLabel, salle: salleLine() }), pageUrl(payload))
+  async function checkResponse() {
+    if (!duelId || busy) return
+    const token = voterToken()
+    if (!token) return
+    setBusy(true)
+    setDuelError("")
+    try {
+      const view = await readDuel({ data: { id: duelId, token } })
+      setDuelRole(view.role)
+      setDuelStatus(view.status)
+      if (view.status === "complete") {
+        setMine(view.mine)
+        setTheirs(view.theirs)
+        setSpectacle(true)
+      }
+    } catch (error) {
+      setDuelError(error instanceof Error ? error.message : "Impossible de vérifier le défi.")
+    } finally {
+      setBusy(false)
+    }
   }
 
   function showDuel() {
     if (mine === null || theirs === null) return
-    const payload: Payload = { d: desire, s: seed, t: createdAt, a: theirs, b: mine }
-    void share(duelText(desire, lines[theirs]?.label ?? "", lines[mine]?.label ?? ""), pageUrl(payload))
+    void share(duelText(desire, lines[theirs]?.label ?? "", lines[mine]?.label ?? ""), "")
   }
 
   const sub = reveal
-    ? "Même envie. Le refus, lui, se voit."
-    : theirs !== null && mine === null
-      ? "Quelqu'un a barré. Tu ne vois pas laquelle."
-      : mine !== null
-        ? "Ta ligne est barrée. Eux joueront sans la voir."
-        : "Cinq coûts. Tu en refuses un. Ensuite tu défies."
+    ? "Deux décisions indépendantes. Un seul papier."
+    : duelId && duelRole === "guest" && duelStatus === "pending"
+      ? "Quelqu'un a déjà refusé un coût. Choisis sans voir lequel."
+      : duelId && duelRole === "owner"
+        ? "Ton choix est enregistré. L'autre personne ne le verra qu'après avoir décidé."
+        : mine !== null
+          ? "Ton choix est fait. Le défi reste à envoyer."
+          : "Cinq coûts. Tu en refuses un. Ensuite tu défies."
   const kicker = reveal
     ? same
       ? "MÊME REFUS"
@@ -364,11 +450,20 @@ export function ReceiptApp() {
         ? "DÉFI"
         : "AUJOURD'HUI"
 
-  const locked = mine !== null || spectacle
+  const locked = mine !== null || spectacle || busy || (duelId !== null && duelStatus !== "pending")
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-4 pt-5 pb-12">
       <p className="text-xs tracking-widest text-paper/50">{kicker}</p>
+      {duelError ? <p role="alert" className="mt-3 border border-stamp px-3 py-3 text-sm leading-normal text-paper">{duelError}</p> : null}
+      {duelId && duelRole === "owner" && duelStatus === "pending" ? (
+        <p className="mt-3 text-xs text-paper/55">DÉFI EN ATTENTE · validité 72 h · vérifier la réponse ci-dessous</p>
+      ) : null}
+      {duelStatus === "closed" || duelStatus === "expired" ? (
+        <p role="status" className="mt-3 text-sm text-paper/70">
+          {duelStatus === "expired" ? "Ce défi a expiré. Imprime un nouveau reçu." : "Ce défi a déjà été répondu depuis un autre navigateur."}
+        </p>
+      ) : null}
 
       <div key={`${desire}-${seed}-${theirs ?? "x"}`} data-receipt className="paper-in mt-3">
         <article className="paper px-4 pt-4 pb-4">
@@ -491,8 +586,13 @@ export function ReceiptApp() {
 
       <div data-actions className="mt-6 flex flex-col gap-3">
         {mine !== null && theirs === null ? (
-          <button type="button" className="tap h-12 w-full bg-paper text-sm font-medium text-ink" onClick={defy}>
-            Défier
+          <button type="button" disabled={busy} className="tap h-12 w-full bg-paper text-sm font-medium text-ink disabled:opacity-50" onClick={() => void defy()}>
+            {busy ? "Préparation…" : duelId ? "Renvoyer le défi" : "Défier"}
+          </button>
+        ) : null}
+        {duelId && duelRole === "owner" && duelStatus === "pending" ? (
+          <button type="button" disabled={busy} className="tap h-12 w-full border border-paper/30 text-sm text-paper disabled:opacity-50" onClick={() => void checkResponse()}>
+            {busy ? "Vérification…" : "Vérifier la réponse"}
           </button>
         ) : null}
         {reveal ? (
@@ -501,7 +601,7 @@ export function ReceiptApp() {
           </button>
         ) : null}
         {mine !== null && theirs !== null && !spectacle ? (
-          <button type="button" className="tap h-12 w-full border border-paper/30 text-sm text-paper" onClick={defy}>
+          <button type="button" className="tap h-12 w-full border border-paper/30 text-sm text-paper" onClick={() => void defy()}>
             Défier à mon tour
           </button>
         ) : null}
@@ -515,11 +615,7 @@ export function ReceiptApp() {
             type="button"
             className="tap h-12 w-full border border-paper/30 text-sm text-paper"
             onClick={() => {
-              if (mine === null) return
-              void writeShare(
-                challengeText(desire, { mine: lines[mine]?.label ?? "", salle: salleLine() }),
-                pageUrl({ d: desire, s: seed, t: createdAt, a: mine }),
-              )
+              void defy(true)
             }}
           >
             Copier le défi
@@ -532,8 +628,7 @@ export function ReceiptApp() {
             onClick={() => {
               if (mine === null || theirs === null) return
               void writeShare(
-                duelText(desire, lines[theirs]?.label ?? "", lines[mine]?.label ?? ""),
-                pageUrl({ d: desire, s: seed, t: createdAt, a: theirs, b: mine }),
+                duelText(desire, lines[theirs]?.label ?? "", lines[mine]?.label ?? ""), "",
               )
             }}
           >
