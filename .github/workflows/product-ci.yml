@@ -16,5 +16,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run typecheck
-      - run: npm test
+      # The generated Grok sandbox suite references .grok/skills excluded from this repository.
+      # Run a dedicated, reproducible app test suite. Keep npm test unchanged as legacy debt.
+      - run: npm run test:product
       - run: npm run build
