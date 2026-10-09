@@ -19,6 +19,14 @@ npm run test:product
 npm run build
 ```
 
+**Staging + Neon:** `npm run build` does not mutate any database. Apply migrations only when pointed at the intended isolated Neon staging branch using `npm run db:migrate`, then run `npm run db:verify`. Never put a Neon `DATABASE_URL` into a committed file. Preview runtime gets the credential solely as a server-side secret in the chosen host. Do not use a production/main Neon branch for trials.
+
+```bash
+# Only after selecting the correct Neon staging branch and setting DATABASE_URL:
+npm run db:migrate
+npm run db:verify
+```
+
 `npm test` is the inherited full Grok workspace suite. Some scaffold tests require `.grok/skills/` files that are absent from this public repository; that legacy test failure is tracked separately and MUST NOT be disguised as proof of application correctness. The product-specific contract tests and typecheck/build are enforced by `.github/workflows/product-ci.yml`.
 
 ## The actual duel
