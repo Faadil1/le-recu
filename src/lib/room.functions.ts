@@ -9,9 +9,16 @@ function utcDay(now = Date.now()): number {
   return Math.floor(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()) / 86_400_000)
 }
 
+async function roomSql() {
+  const { dbSource, getSql } = await import("@/lib/db")
+  if (dbSource === "pglite" && process.env.NODE_ENV === "production") {
+    throw new Error("La salle nécessite une base partagée persistante.")
+  }
+  return getSql()
+}
+
 async function countsFor(desire: string): Promise<RoomTally> {
-  const { getSql } = await import("@/lib/db")
-  const sql = await getSql()
+  const sql = await roomSql()
   const day = utcDay()
   const rows = await sql<{ line: number; n: number }>`
     select line, count(*) as n
@@ -49,8 +56,7 @@ export const castStrike = createServerFn({ method: "POST" })
     if (utcDay(data.issuedAt) !== day || dailySeedFor(desire, data.issuedAt) !== data.seed) {
       return countsFor(desire)
     }
-    const { getSql } = await import("@/lib/db")
-    const sql = await getSql()
+    const sql = await roomSql()
     await sql`
       insert into strikes (day, desire, line, token)
       values (${day}, ${desire}, ${data.line}, ${data.token})
