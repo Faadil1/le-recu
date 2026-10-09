@@ -661,37 +661,37 @@ export function ReceiptApp() {
       <div data-actions className="mt-6 flex flex-col gap-3">
         {mine !== null && theirs === null ? (
           <button type="button" disabled={busy} className="tap h-12 w-full bg-paper text-sm font-medium text-ink disabled:opacity-50" onClick={() => void defy()}>
-            {busy && busyAction === "share" ? "Partage en cours…" : busy && busyAction === "seal" ? "Scellement…" : duelId ? "Envoyer le défi" : "Sceller mon choix"}
+            {busy && busyAction === "share" ? words.sharing : busy && busyAction === "seal" ? words.sealing : duelId ? words.send : words.seal}
           </button>
         ) : null}
         {duelId && duelRole === "owner" && duelStatus === "pending" ? (
           <button type="button" disabled={busy} className="tap h-12 w-full border border-paper/30 text-sm text-paper disabled:opacity-50" onClick={() => void checkResponse()}>
-            {busyAction === "check" ? "Vérification…" : "Vérifier la réponse"}
+            {busyAction === "check" ? words.checking : words.check}
           </button>
         ) : null}
         {responseChecked && duelRole === "owner" && duelStatus === "pending" ? (
           <p role="status" className="text-center text-sm text-paper/70">
-            Toujours en attente de l’autre personne. Ton défi reste actif pendant 72 h après sa création.
+            {words.stillPending}
           </p>
         ) : null}
         {reveal ? (
           <>
             <button type="button" disabled={posterBusy} className="tap h-12 w-full bg-paper text-sm font-medium text-ink disabled:opacity-50" onClick={() => void downloadDuelPoster()}>
-              {posterBusy ? "Composition…" : "Partager l'image du duo"}
+              {posterBusy ? words.composing : words.poster}
             </button>
             <button type="button" className="tap h-12 w-full border border-paper/30 text-sm text-paper" onClick={showDuel}>
-              Copier la confrontation en texte
+              {words.copyText}
             </button>
           </>
         ) : null}
         {mine !== null && theirs !== null && !spectacle ? (
           <button type="button" className="tap h-12 w-full border border-paper/30 text-sm text-paper" onClick={() => void defy()}>
-            Défier à mon tour
+            {words.challengeAgain}
           </button>
         ) : null}
         {spectacle ? (
           <button type="button" className="tap h-12 w-full border border-paper/30 text-sm text-paper" onClick={playMine}>
-            À mon tour
+            {words.again}
           </button>
         ) : null}
         {mine !== null && theirs === null && duelId ? (
@@ -700,7 +700,7 @@ export function ReceiptApp() {
             className="tap h-12 w-full border border-paper/30 text-sm text-paper"
             onClick={() => void defy(true)}
           >
-            Copier le lien uniquement
+            {words.copyUrl}
           </button>
         ) : null}
         {reveal ? (
@@ -710,21 +710,21 @@ export function ReceiptApp() {
             onClick={() => {
               if (mine === null || theirs === null) return
               void writeShare(
-                duelText(desire, lines[theirs]?.label ?? "", lines[mine]?.label ?? ""), "",
+                duelCopy(desire,theirLabel,myLabel,locale), "",
               )
             }}
           >
-            Copier le duel
+            {words.copyDuel}
           </button>
         ) : null}
-        {copied === "ok" ? <p role="status" className="text-center text-sm text-paper/70">Copié dans le presse-papiers.</p> : null}
+        {copied === "ok" ? <p role="status" className="text-center text-sm text-paper/70">{words.copied}</p> : null}
         {copied === "fail" ? (
           <pre className="overflow-x-auto text-xs leading-normal whitespace-pre-wrap text-paper/75">{shareBlock}</pre>
         ) : null}
       </div>
 
       <div className="mt-8">
-        <p className="text-xs tracking-widest text-paper/50">UNE AUTRE ENVIE</p>
+        <p className="text-xs tracking-widest text-paper/50">{words.more}</p>
         <div className="mt-3 flex flex-wrap gap-2">
           {DECK.filter((prompt) => fold(prompt) !== fold(desire)).map((prompt) => (
             <button
@@ -733,7 +733,7 @@ export function ReceiptApp() {
               className="tap h-11 border border-paper/25 px-3 text-sm text-paper"
               onClick={() => issue(prompt)}
             >
-              {prompt}
+              {localizedDesire(prompt,locale)}
             </button>
           ))}
           <button
@@ -741,7 +741,7 @@ export function ReceiptApp() {
             className="tap h-11 border border-paper/25 px-3 text-sm text-paper"
             onClick={() => setCustomOpen((open) => !open)}
           >
-            la mienne
+            {words.mine}
           </button>
         </div>
         {customOpen ? (
@@ -753,10 +753,10 @@ export function ReceiptApp() {
             }}
           >
             <label htmlFor="envie" className="text-sm text-paper/70">
-              Ton envie
+              {words.yourWish}
             </label>
             <p className="mt-2 text-xs leading-normal text-paper/55">
-              Les envies personnelles restent ici. Pour défier quelqu'un, choisis une des huit envies publiques.
+              {words.personal}
             </p>
             <input
               id="envie"
@@ -764,7 +764,7 @@ export function ReceiptApp() {
               maxLength={72}
               enterKeyHint="done"
               autoComplete="off"
-              placeholder="partir, écrire, dire non…"
+              placeholder={words.placeholder}
               onChange={(event) => setDraft(event.target.value)}
               className="mt-2 w-full border-b border-paper/25 bg-transparent py-3 font-display text-2xl font-semibold text-paper outline-none placeholder:text-paper/45"
             />
@@ -773,7 +773,7 @@ export function ReceiptApp() {
               className="tap mt-4 h-12 w-full bg-paper text-sm font-medium text-ink disabled:opacity-40"
               disabled={cleanDesire(draft).length < 2}
             >
-              Imprimer
+              {words.print}
             </button>
           </form>
         ) : null}
@@ -781,10 +781,11 @@ export function ReceiptApp() {
 
       {historyRows.length > 0 ? (
         <section className="mt-12">
-          <h2 className="text-xs tracking-widest text-paper/50">TES REÇUS</h2>
+          <h2 className="text-xs tracking-widest text-paper/50">{words.receipts}</h2>
           <ul className="mt-2">
             {historyRows.map((item) => {
-              const label = generateLines(item.d, item.s)[item.x]?.label ?? ""
+              const savedCost=generateLines(item.d,item.s)[item.x]
+              const label=savedCost?localizedCost(savedCost,locale).label:""
               return (
                 <li key={`${item.t}-${item.s}-${item.x}`}>
                   <button
@@ -792,8 +793,8 @@ export function ReceiptApp() {
                     className="tap min-h-11 w-full border-t border-paper/15 py-3 text-left"
                     onClick={() => openSaved(item)}
                   >
-                    <span className="block text-paper">{quote(item.d)}</span>
-                    <span className="mt-1 block text-sm text-paper/55">refusé · {label}</span>
+                    <span className="block text-paper">{quote(localizedDesire(item.d,locale),locale)}</span>
+                    <span className="mt-1 block text-sm text-paper/55">{words.history} · {label}</span>
                   </button>
                 </li>
               )
