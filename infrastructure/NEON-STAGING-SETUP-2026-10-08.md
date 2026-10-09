@@ -1,3 +1,26 @@
+## Verified Neon setup receipt — 2026-10-09 UTC
+
+**OBSERVED through the connected Neon project**, not a simulated or local database.
+
+- Project ID: `broad-sunset-79790814` — Neon project `le-recu`, AWS `aws-us-east-2`, PostgreSQL 18.
+- Production branch: `br-square-tooth-b42e0mc2` / `production`; schema empty and **untouched**.
+- Staging branch: `br-shy-field-b425j1zd` / `le-recu-staging`, created explicitly from the empty production parent and confirmed `ready`.
+- Database: `neondb` (Neon's initial database). No new database or live-user data was created.
+- Migration transaction on staging: **APPLIED** exact `migrations/0002_strikes.sql` and `migrations/0003_duels.sql` from build branch as discrete SQL statements, with an atomic `_migrations` ledger. Original multi-command prepared-statement attempt was rejected and retried as a transaction with individually separated statements.
+- Read-only verification: three tables `_migrations`, `duels`, `strikes` exist. Ledger holds `0002_strikes.sql`, `0003_duels.sql`.
+- Schema inspection: `duels` unique id and responder pair constraints; `strikes` unique (day, desire, token) and line bounds. Both application tables contain **zero rows**.
+- Production branch tables remain empty after staging migration, confirming branch isolation.
+- No credentials retrieved or printed. No `DATABASE_URL` added to GitHub, GitHub Actions or Vercel. No deployed runtime or cross-device result is claimed.
+- `readDuel` server function now uses POST instead of GET to avoid putting browser bearer tokens into query URLs.
+
+### Actual next gate
+
+Choose the intended connected Vercel account for a new isolated `le-recu` Preview project. Then securely provision its `DATABASE_URL` **for the staging Neon branch only** and deploy the exact GitHub build branch, verify runtime↔commit and the complete two-device flow. Neon already contains the schema, so a normal Vercel build must not re-run migrations.
+
+**Neon CLI onboarding prompt note:** the generated `npm i -g neon; neon login; neon link --branch production; neon config init; neon deploy` is a generic template. It is not required to connect an existing Node/React application to server-side PostgreSQL. Avoid linking or deploying `production` for staging experiments. Use the connected Neon tools and isolated staging branch as actually verified above.
+
+---
+
 # Neon PostgreSQL — isolated staging contract
 
 Status: **STAGING PREPARATION ONLY** (2026-10-08). No Neon branch, database, secret, Vercel project, runtime or external participant has been created/configured by this document.
