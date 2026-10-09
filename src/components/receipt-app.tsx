@@ -484,6 +484,17 @@ export function ReceiptApp() {
 
   const locked = mine !== null || spectacle || busy || (duelId !== null && duelStatus !== "pending")
 
+  if (!booted) {
+    return (
+      <main className="mx-auto flex min-h-dvh w-full max-w-md items-start px-4 pt-10">
+        <div role="status" className="paper w-full px-6 py-10">
+          <p className="font-display text-3xl">LE REÇU</p>
+          <p className="mt-3 text-xs tracking-widest text-ink/60">LE PAPIER SE PRÉPARE…</p>
+        </div>
+      </main>
+    )
+  }
+
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-4 pt-5 pb-12">
       <p className="text-xs tracking-widest text-paper/50">{kicker}</p>
@@ -694,6 +705,9 @@ export function ReceiptApp() {
             <label htmlFor="envie" className="text-sm text-paper/70">
               Ton envie
             </label>
+            <p className="mt-2 text-xs leading-normal text-paper/55">
+              Les envies personnelles restent ici. Pour défier quelqu'un, choisis une des huit envies publiques.
+            </p>
             <input
               id="envie"
               value={draft}
