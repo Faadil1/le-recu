@@ -405,7 +405,7 @@ export function ReceiptApp() {
   async function share(text: string, url: string) {
     if (navigator.share) {
       try {
-        await navigator.share(url ? { title: "LE REÇU", text, url } : { title: "LE REÇU", text })
+        await navigator.share(url ? { title: words.title, text, url } : { title: words.title, text })
         return
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") return
