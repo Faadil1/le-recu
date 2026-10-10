@@ -336,6 +336,7 @@ export function ReceiptApp() {
     setCustomOpen(false)
     setCopied("idle")
     resetDuel()
+    window.scrollTo({ top: 0, behavior: "auto" })
   }
 
   async function strike(index: number) {
@@ -372,11 +373,9 @@ export function ReceiptApp() {
   }
 
   function playMine() {
-    setMine(null)
-    setTheirs(null)
-    setSpectacle(false)
-    setCopied("idle")
-    resetDuel()
+    // An invitation chain is a NEW independent decision, never a replay of
+    // an expired receipt/old daily seed or a public reveal of the previous pair.
+    issue(desire)
   }
 
   function openSaved(item: Saved) {
