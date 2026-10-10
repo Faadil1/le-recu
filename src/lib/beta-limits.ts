@@ -49,10 +49,11 @@ export async function consumeBetaBudget(
 ): Promise<void> {
   const day = utcDayBucket(now)
   const limits = BETA_BUDGET[scope]
-  // Global first: even a sybil attack with unlimited fresh tokens cannot cause
-  // unlimited create/reply/room writes on a shared database.
-  const globalOk=await claim(sql,scope,day,"GLOBAL",limits.global)
-  if (!globalOk) throw new Error("Capacité de test atteinte pour aujourd'hui. Réessaie demain.")
+  // Browser first: a single client must not exhaust the GLOBAL capacity by
+  // retrying already-limited requests. Both updates are atomic but not a
+  // two-row transaction: failed global claims may consume a browser slot.
   const actorOk=await claim(sql,scope,day,pseudonymKey(token),limits.perBrowser)
   if (!actorOk) throw new Error("Limite de participation atteinte sur ce navigateur aujourd'hui.")
+  const globalOk=await claim(sql,scope,day,"GLOBAL",limits.global)
+  if (!globalOk) throw new Error("Capacité de test atteinte pour aujourd'hui. Réessaie demain.")
 }
