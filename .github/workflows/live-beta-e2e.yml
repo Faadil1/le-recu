@@ -22,6 +22,7 @@ jobs:
           node-version: "22"
           cache: npm
       - run: npm ci
+      - run: node --check scripts/live-beta-e2e.mjs
       - run: npx playwright install --with-deps chromium
       - name: Verify LIVE external FR→EN duplex and authorized deletion
         run: node scripts/live-beta-e2e.mjs
