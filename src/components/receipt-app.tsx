@@ -191,6 +191,8 @@ export function ReceiptApp() {
   const [copied, setCopied] = useState<"idle" | "ok" | "fail">("idle")
   const [shareBlock, setShareBlock] = useState("")
   const [room, setRoom] = useState<RoomTally | null>(null)
+  const [roomJoined, setRoomJoined] = useState(false)
+  const [roomSubmitting, setRoomSubmitting] = useState(false)
   const [duelId, setDuelId] = useState<string | null>(null)
   const [duelRole, setDuelRole] = useState<DuelView["role"]>("guest")
   const [duelStatus, setDuelStatus] = useState<DuelView["status"] | "none">("none")
@@ -270,11 +272,9 @@ export function ReceiptApp() {
       return
     }
     let cancel = false
-    const token = voterToken()
-    const run = token
-      ? castStrike({ data: { desire, line: mine, token, seed, issuedAt: createdAt } })
-      : readRoom({ data: { desire } })
-    void run.then((next) => {
+    // Reading the room does NOT cast a vote. Only the explicit opt-in action
+    // below is allowed to persist an anonymous browser-token strike.
+    void readRoom({ data: { desire } }).then((next) => {
       if (!cancel) setRoom(next)
     }).catch(() => {
       if (!cancel) setRoom(null)
@@ -335,6 +335,8 @@ export function ReceiptApp() {
     setDraft("")
     setCustomOpen(false)
     setCopied("idle")
+    setRoom(null)
+    setRoomJoined(false)
     resetDuel()
     window.scrollTo({ top: 0, behavior: "auto" })
   }
@@ -386,7 +388,24 @@ export function ReceiptApp() {
     setTheirs(null)
     setSpectacle(false)
     setCopied("idle")
+    setRoom(null)
+    setRoomJoined(false)
     resetDuel()
+  }
+
+  async function joinRoom() {
+    if (roomSubmitting || roomJoined || mine === null || !deckDesire(desire)) return
+    const token=voterToken()
+    if(!token){setDuelError(words.storage);return}
+    setRoomSubmitting(true)
+    setDuelError("")
+    try {
+      const next=await castStrike({data:{desire,line:mine,token,seed,issuedAt:createdAt}})
+      setRoom(next)
+      setRoomJoined(true)
+    } catch(error) {
+      setDuelError(error instanceof Error ? localizedServerError(error.message,locale) : words.unavailable)
+    } finally { setRoomSubmitting(false) }
   }
 
   async function writeShare(text: string, url: string) {
@@ -663,6 +682,17 @@ export function ReceiptApp() {
                 </>
               )}
             </div>
+          ) : null}
+          {mine !== null && deckDesire(desire) && !roomJoined ? (
+            <div className="mt-5 border-t border-ink/15 pt-3">
+              <button type="button" onClick={() => void joinRoom()} disabled={roomSubmitting}
+                className="tap min-h-11 w-full border border-ink/35 px-3 text-xs font-medium tracking-wide text-ink disabled:opacity-50">
+                {roomSubmitting ? words.roomSubmitting : words.roomConsent}
+              </button>
+              <p className="mt-2 text-xs leading-normal text-ink/65">{words.roomNotice}</p>
+            </div>
+          ) : roomJoined ? (
+            <p role="status" className="mt-5 text-center text-xs text-ink/70">{words.roomJoined}</p>
           ) : null}
           <Rule seed={seed} />
           <p className="mt-4 text-center text-xs tracking-widest text-ink/40">{words.signoff}</p>
