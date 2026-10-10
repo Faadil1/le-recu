@@ -1,4 +1,5 @@
 import assert from "node:assert/strict"
+import { mkdirSync } from "node:fs"
 import { chromium } from "playwright"
 
 const BASE=process.env.LIVE_BETA_URL
@@ -41,6 +42,7 @@ try {
   await b.locator(".duplex-imprint").waitFor({state:"visible",timeout:30000})
   assert.match(await b.locator(".duplex-imprint").innerText(),/TWO SIGNATURES/)
   const enOutcome=await b.locator(".duplex-imprint").innerText()
+  assert.match(enOutcome,/NOT THE SAME LINE|SAME REFUSAL/)
 
   await a.locator("[data-actions]").getByRole("button",{name:"Vérifier la réponse"}).click()
   await a.locator(".duplex-imprint").waitFor({state:"visible",timeout:30000})
@@ -54,10 +56,19 @@ try {
   assert.ok(ownerFirst.trim().length>2)
   assert.ok(responderFirst.trim().length>2)
   assert.notEqual(ownerFirst,responderFirst,"the browser languages must be independently presented")
+  await b.getByRole("button",{name:"FR",exact:true}).click()
+  assert.equal((await b.locator(".duplex-second .duplex-cost").innerText()).trim(),ownerFirst.trim())
+  assert.equal((await b.locator(".duplex-first .duplex-cost").innerText()).trim(),
+    (await a.locator(".duplex-second .duplex-cost").innerText()).trim())
+  await b.getByRole("button",{name:"EN",exact:true}).click()
+  mkdirSync("playwright-artifacts",{recursive:true})
+  await a.screenshot({path:"playwright-artifacts/duplex-fr-mobile.png",fullPage:true})
+  await b.screenshot({path:"playwright-artifacts/duplex-en-mobile.png",fullPage:true})
   const ownerDownload=a.waitForEvent("download",{timeout:25000})
   await a.locator("[data-actions]").getByRole("button",{name:"Partager l'image du duo"}).click()
   const file=await ownerDownload
   assert.match(file.suggestedFilename(),/le-recu-duplex.*\.png/)
+  await file.saveAs("playwright-artifacts/duplex-poster-fr.png")
   console.log("LIVE STAGING BETA PASS: external FR creator → EN recipient → Neon reply → both duplex views → PNG generated.")
 } finally {
   if (invite) {
@@ -65,8 +76,8 @@ try {
       a.once("dialog",(dialog)=>{void dialog.accept()})
       const erase=a.getByRole("button",{name:"Effacer ce défi"})
       if (await erase.count()) await erase.click({timeout:12000})
-      await a.waitForTimeout(1500)
-      console.log("E2E teardown: requested participant-authorized server erasure.")
+      await a.getByText("Défi supprimé de la base.",{exact:false}).waitFor({state:"visible",timeout:25000})
+      console.log("E2E teardown: server-confirmed participant-authorized erasure.")
     } catch(error) {
       console.warn("E2E teardown unverified; manually inspect staging test duel. Do not assume it was deleted.",error instanceof Error?error.message:"unknown")
     }
