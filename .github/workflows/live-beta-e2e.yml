@@ -1,0 +1,34 @@
+name: LE REÇU — Isolated Live Beta Browser QA
+on:
+  push:
+    branches:
+      - build/duplex-blind-duel-v1
+    paths:
+      - scripts/live-beta-e2e.mjs
+      - .github/workflows/live-beta-e2e.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  live-beta:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      LIVE_BETA_URL: https://le-recu-invite-beta-git-build-duplex-b-ec73a7-faadil1s-projects.vercel.app/
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Verify LIVE external FR→EN duplex and authorized deletion
+        run: node scripts/live-beta-e2e.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: le-recu-live-beta-fr-en
+          path: playwright-artifacts/
+          if-no-files-found: ignore
+          retention-days: 7
