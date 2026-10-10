@@ -1,5 +1,16 @@
 # LE REÇU — Duplex (research preview)
 
+
+> **PRODUCT DEPTH & LIVE REALITY — RELEASE BLOCKED.** The existing Neon staging duet demonstrates one real load-bearing A→B outcome, **not** a publicly operable product. Production requires live external journeys, failure/recovery, privacy, abuse handling, operator capability, stable onboarding and meaningful post-duel depth. Art, screenshots, deterministic demos, Vercel READY and CI success cannot waive this requirement. See [Full Live Product PRD](product/LE-RECU-LIVE-PRODUCT-PRD-V1.md) and [Conditional Gate Registry](product/LIVE-PRODUCT-REALITY.json).
+
+```bash
+npm run product:check          # truthful registry integrity; allows blocked staging work
+npm run product:release-check  # fails until mandatory production claims are LIVE-proven
+```
+
+Production-targeted Vercel builds run the release check **before** bundling and intentionally fail closed while release criteria are unproven. Preview builds remain available for development, with no automatic promotion from `main`.
+
+
 **Same desire. Two different prices.** A paper receipt becomes a real two-person, blind-by-interface decision: each participant chooses one of five costs they refuse to pay. Only after the second browser commits does the single duplex receipt reveal both answers.
 
 **Branch status:** DRAFT / DO NOT MERGE. Product integration is coded; production deployment, live third-party participation, screenshot QA, retention and anti-abuse are NOT yet proven.
