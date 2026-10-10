@@ -26,6 +26,19 @@ export type DuelView = {
   theirs: number | null
 }
 
+/**
+ * Two browsers see "mine/theirs" in opposite orders.
+ * A publicly exported receipt must use stable creation order instead.
+ * This never introduces a choice before BOTH participants have committed.
+ */
+export function canonicalSelections(
+  role: DuelView["role"], mine: number | null, theirs: number | null,
+): { first: number; second: number } | null {
+  if ((role !== "owner" && role !== "responder") || mine === null || theirs === null) return null
+  if (!Number.isInteger(mine) || !Number.isInteger(theirs) || mine < 0 || mine > 4 || theirs < 0 || theirs > 4) return null
+  return role === "owner" ? { first: mine, second: theirs } : { first: theirs, second: mine }
+}
+
 export function duelView(record: DuelRecord | null, token: string, now = Date.now()): DuelView {
   if (!record) return {
     id: "",
