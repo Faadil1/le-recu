@@ -12,9 +12,9 @@ const original=await browser.newContext({locale:"fr-CA",acceptDownloads:true,vie
 const other=await browser.newContext({locale:"en-US",acceptDownloads:true,viewport:{width:390,height:844}})
 const a=await original.newPage()
 const b=await other.newPage()
-let invite:string|null=null
+let invite=null
 
-async function waitReceipt(page:typeof a) {
+async function waitReceipt(page) {
   await page.locator("[data-receipt]").waitFor({state:"visible",timeout:30000})
   await page.locator(".line-btn").first().waitFor({state:"visible"})
 }
