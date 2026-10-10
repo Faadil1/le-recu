@@ -631,6 +631,11 @@ export function ReceiptApp() {
             {quote(shownDesire,locale)}
           </h1>
           <p className="mt-2 text-sm leading-normal text-pretty text-ink/70">{sub}</p>
+          {!reveal ? (
+            <p className="mt-3 border-l-2 border-stamp/55 pl-3 text-xs leading-relaxed text-ink/65">
+              {duelId && duelRole === "guest" ? words.betaGuest : words.betaNotice}
+            </p>
+          ) : null}
           <ul className="lines mt-4 divide-y divide-ink/10">
             {shown.map((line, index) => (
               <li key={line.id}>
