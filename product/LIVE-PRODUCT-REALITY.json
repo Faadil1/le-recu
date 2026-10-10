@@ -81,14 +81,16 @@
       "id": "live-core-loop-staging",
       "status": "PROVEN",
       "release_required": false,
-      "basis": "One actual staging Neon duel completed with two distinct browser tokens",
+      "basis": "PROVEN twice by external automated Chromium FR→EN runs on public Preview, real Neon committed and erased; human value UNKNOWN",
       "evidence": {
         "classification": "LIVE",
         "scope": "staging",
-        "artifact": "evidence/LE-RECU-LIVE-CORE-LOOP-2026-10-09.md",
+        "artifact": "evidence/LE-RECU-LIVE-BETA-E2E-2026-10-09.md",
         "verified_at": "2026-10-09",
-        "method": "Neon SQL readback + supplied cross-browser flow",
-        "limits": "One completed duet / two browser tokens; not proof of distinct people, adoption, public readiness"
+        "method": "Two external Playwright Chromium contexts on public Vercel Preview; real Neon A→B duplex, FR/EN and participant-authorized deletion",
+        "commit": "2ffb3020bc7b59173348d2dfa8443e91ba1593ea",
+        "runtime_url": "https://le-recu-invite-beta-git-build-duplex-b-ec73a7-faadil1s-projects.vercel.app/",
+        "limits": "Two automated happy-path runs only; no human user adoption, reliability or production claim"
       }
     },
     {
@@ -127,7 +129,7 @@
       "id": "representative-paths",
       "status": "BLOCKED",
       "release_required": true,
-      "basis": "Happy path plus success/boundary/refuse/review/recovery breadth not established"
+      "basis": "Automated happy path and user-initiated deletion succeeded twice; negative, race, timeout, stale and dependency recovery paths remain untested"
     },
     {
       "id": "negative-recovery-production",
@@ -199,7 +201,7 @@
       "id": "privacy-consent-retention",
       "status": "BLOCKED",
       "release_required": true,
-      "basis": "No opt-in policy, auto erasure/retention process or user deletion"
+      "basis": "Beta explains current open-ended retention; explicit room opt-in and participant deletion implemented and exercised by automation, but no guaranteed purge or privacy operations"
     },
     {
       "id": "anti-abuse-sybil-rate-limits",
@@ -223,7 +225,7 @@
       "id": "public-entry-domain",
       "status": "BLOCKED",
       "release_required": true,
-      "basis": "Preview currently Vercel-protected; no stable safe public link"
+      "basis": "Public Vercel Preview is externally readable and two A→B automated runs succeed; safe production domain, privacy/abuse and human onboarding remain BLOCKED"
     },
     {
       "id": "safe-share-preview-semantics",
