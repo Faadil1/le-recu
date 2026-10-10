@@ -123,3 +123,20 @@ export const answerDuel = createServerFn({ method: "POST" })
     if (view.status === "expired") throw new Error("Ce défi a expiré.")
     throw new Error("Ce défi a déjà reçu une réponse.")
   })
+
+/** Either actual participant may withdraw the entire shared receipt.
+ * This is a real deletion, not merely a hidden local card.
+ * A separate local history deletion is handled by the calling client.
+ */
+export const eraseDuel = createServerFn({ method: "POST" })
+  .validator(z.object({ id: idRule, token: tokenRule }))
+  .handler(async ({ data }): Promise<{ erased: boolean }> => {
+    const sql = await sqlForDuel()
+    const rows = await sql<{ id: string }>`
+      delete from duels
+      where id = ${data.id}
+        and (creator_token = ${data.token} or responder_token = ${data.token})
+      returning id
+    `
+    return { erased: rows.length > 0 }
+  })
