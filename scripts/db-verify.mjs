@@ -37,6 +37,7 @@ const required = [
   "_migrations",
   "duels",
   "strikes",
+  "action_limits",
 ];
 const pool = new pg.Pool({ connectionString: value, max: 1, connectionTimeoutMillis: 8000 });
 try {
@@ -55,10 +56,10 @@ try {
       `select name from _migrations
        where name = any($1::text[])
        order by name`,
-      [["0002_strikes.sql", "0003_duels.sql"]],
+      [["0002_strikes.sql", "0003_duels.sql", "0004_action_limits.sql"]],
     );
     const applied = new Set(migrations.map((r) => r.name));
-    const needed = ["0002_strikes.sql", "0003_duels.sql"];
+    const needed = ["0002_strikes.sql", "0003_duels.sql", "0004_action_limits.sql"];
     const pending = needed.filter((name) => !applied.has(name));
     if (pending.length > 0) {
       console.error("[db:verify] BLOCKED: required migrations not recorded:", pending.join(", "));
