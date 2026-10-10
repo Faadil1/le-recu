@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start"
 import { z } from "zod"
 import { cleanDesire, dailySeedFor, deckDesire } from "@/lib/receipt"
 import { duelView, type DuelRecord, type DuelView } from "@/lib/duel-contract"
+import { consumeBetaBudget } from "@/lib/beta-limits"
 
 /**
  * The server issues an opaque UUID; participant selections NEVER live in links.
@@ -58,6 +59,7 @@ export const createDuel = createServerFn({ method: "POST" })
       throw new Error("Le reçu du jour a changé. Réimprime ce reçu avant de défier.")
     }
     const sql = await sqlForDuel()
+    await consumeBetaBudget(sql, "duel-create", data.token, createdAt)
     const id = crypto.randomUUID()
     await sql`
       insert into duels (
@@ -87,6 +89,19 @@ export const answerDuel = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<DuelView> => {
     const sql = await sqlForDuel()
     const now = Date.now()
+    // Retry after a successful commit is free, even if an actor has exhausted
+    // the daily budget. Every returned view is still permission-filtered.
+    const current=await find(data.id)
+    if (!current) throw new Error("Défi introuvable.")
+    if (current.responder_token === data.token && current.responder_line !== null) {
+      return duelView(current,data.token,now)
+    }
+    if (current.creator_token === data.token) {
+      throw new Error("Ouvre le défi dans un autre navigateur pour jouer à deux.")
+    }
+    if (now > current.expires_at_ms) throw new Error("Ce défi a expiré.")
+    if (current.responder_line !== null) throw new Error("Ce défi a déjà reçu une réponse.")
+    await consumeBetaBudget(sql, "duel-reply", data.token, now)
     // One atomic responder commitment, no second browser can overwrite it.
     const rows = await sql<Record<string, unknown>>`
       update duels
