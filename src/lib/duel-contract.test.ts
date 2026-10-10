@@ -1,6 +1,6 @@
 import test from "node:test"
 import assert from "node:assert/strict"
-import { duelView, type DuelRecord } from "./duel-contract.ts"
+import { canonicalSelections, duelView, type DuelRecord } from "./duel-contract.ts"
 import { challengeText, dailyReceipt, dailySeedFor, generateLines, hashString, fold, DECK } from "./receipt.ts"
 
 const row: DuelRecord = {
@@ -77,4 +77,19 @@ test("new UTC day produces new catalogue seed", () => {
   const before = Date.UTC(2026, 9, 8, 22, 30, 0)
   const after = Date.UTC(2026, 9, 9, 1, 30, 0)
   assert.notEqual(dailySeedFor("quitter", before), dailySeedFor("quitter", after))
+})
+
+test("public poster order is identical for owner and responder despite opposite personal roles", () => {
+  const owner = canonicalSelections("owner", 2, 4)
+  const responder = canonicalSelections("responder", 4, 2)
+  assert.deepEqual(owner, { first: 2, second: 4 })
+  assert.deepEqual(responder, owner)
+})
+
+test("public poster cannot be constructed with unknown role or before response", () => {
+  assert.equal(canonicalSelections("guest", 2, 4), null)
+  assert.equal(canonicalSelections("owner", 2, null), null)
+  assert.equal(canonicalSelections("responder", null, 4), null)
+  assert.equal(canonicalSelections("owner", -1, 0), null)
+  assert.equal(canonicalSelections("responder", 0, 5), null)
 })
