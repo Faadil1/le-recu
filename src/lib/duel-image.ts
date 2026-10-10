@@ -2,15 +2,15 @@ import { t, type Locale } from "./locale"
 
 type PosterInput = {
   desire: string
-  mine: string
-  theirs: string
+  first: string
+  second: string
   timestamp: number
   number: string
   locale: Locale
 }
 
 /** Original 4:5 artefact drawn only from two committed choices. No artificial stats. */
-export function makeDuplexPoster({ desire, mine, theirs, timestamp, number, locale }: PosterInput): Promise<Blob> {
+export function makeDuplexPoster({ desire, first, second, timestamp, number, locale }: PosterInput): Promise<Blob> {
   const canvas=document.createElement("canvas")
   canvas.width=1080
   canvas.height=1350
@@ -41,12 +41,12 @@ export function makeDuplexPoster({ desire, mine, theirs, timestamp, number, loca
   ctx.strokeStyle="#c7beb2"
   ctx.beginPath();ctx.moveTo(122,532);ctx.lineTo(958,532);ctx.stroke()
   ctx.font=`22px ${mono}`
-  ctx.fillText(words.me,124,595)
-  drawRefusal(ctx,mine,123,682,815,56,serif,red)
+  ctx.fillText(words.first,124,595)
+  drawRefusal(ctx,first,123,682,815,56,serif,red)
   ctx.font=`22px ${mono}`
   ctx.fillStyle=ink
-  ctx.fillText(words.them,124,836)
-  drawRefusal(ctx,theirs,123,922,815,56,serif,red)
+  ctx.fillText(words.second,124,836)
+  drawRefusal(ctx,second,123,922,815,56,serif,red)
   // Text always fits within this seal; the older one-line verdict overflowed it.
   ctx.strokeStyle=red
   ctx.lineWidth=4
@@ -54,7 +54,7 @@ export function makeDuplexPoster({ desire, mine, theirs, timestamp, number, loca
   ctx.fillStyle=red
   ctx.textAlign="center"
   ctx.font=`bold 24px ${mono}`
-  const same=mine===theirs
+  const same=first===second
   const seal=locale==="en"?(same?["SAME","REFUSAL"]:["NOT THE","SAME LINE"]):(same?["MÊME","REFUS"]:["PAS LA MÊME","LIGNE"])
   ctx.fillText(seal[0],540,1115)
   ctx.fillText(seal[1],540,1150)
