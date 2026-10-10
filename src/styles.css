@@ -143,3 +143,86 @@
     transform: rotate(-6deg);
   }
 }
+
+/* The comparison is physically a second ink impression, not an analytics card. */
+.duplex-imprint {
+  position: relative;
+  padding: 22px 12px 28px;
+  overflow: hidden;
+  border-top: 1px dashed color-mix(in oklab, var(--color-ink) 40%, transparent);
+  border-bottom: 1px dashed color-mix(in oklab, var(--color-ink) 40%, transparent);
+  background: repeating-linear-gradient(
+    0deg, transparent 0 27px,
+    color-mix(in oklab, var(--color-ink) 3%, transparent) 28px 29px
+  );
+  animation: paperIn 550ms ease-out both;
+}
+.duplex-eyebrow, .duplex-index {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  color: color-mix(in oklab, var(--color-ink) 60%, transparent);
+}
+.duplex-eyebrow { text-align: center; margin-bottom: 20px; }
+.duplex-plates { position: relative; display: grid; gap: 8px; }
+.duplex-plate {
+  display: grid;
+  grid-template-columns: minmax(76px, 0.38fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+  text-align: left;
+  padding: 13px 5px;
+  border-bottom: 1px solid color-mix(in oklab, var(--color-ink) 15%, transparent);
+}
+.duplex-second {
+  position: relative;
+  margin-left: 14px;
+  border-left: 2px solid var(--color-stamp);
+  padding-left: 15px;
+  animation: lineIn 650ms 180ms both;
+}
+.duplex-cost {
+  font-family: var(--font-display);
+  font-size: clamp(18px, 5vw, 26px);
+  font-style: italic;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.duplex-refused {
+  text-decoration-line: line-through;
+  text-decoration-color: var(--color-stamp);
+  text-decoration-thickness: 2px;
+  text-decoration-skip-ink: none;
+}
+.duplex-verdict {
+  width: max-content;
+  max-width: 100%;
+  margin: 24px auto 6px;
+  padding: 9px 15px;
+  transform: rotate(-4deg);
+  border: 2px solid var(--color-stamp);
+  border-radius: 50%;
+  color: var(--color-stamp);
+  font-family: var(--font-mono);
+  font-size: clamp(10px, 3vw, 12px);
+  font-weight: bold;
+  line-height: 1.25;
+  letter-spacing: 0.03em;
+  text-align: center;
+}
+.duplex-note {
+  max-width: 22rem;
+  margin-inline: auto;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 18px;
+  line-height: 1.35;
+  color: var(--color-ink);
+}
+@media (prefers-reduced-motion: reduce) {
+  .duplex-imprint, .duplex-second {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}

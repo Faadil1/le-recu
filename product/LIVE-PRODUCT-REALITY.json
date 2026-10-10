@@ -1,0 +1,279 @@
+{
+  "schema_version": 1,
+  "product": "LE REÇU — Duplex",
+  "verified_context": "Neon le-recu-staging / build/duplex-blind-duel-v1",
+  "release_decision": "BLOCKED",
+  "release_rule": "Only direct production evidence of completed external journeys can promote a release_required gate. CI/local/screenshot/replay does not qualify.",
+  "gates": [
+    {
+      "id": "macro-lifecycle",
+      "status": "ACTIVE",
+      "release_required": false,
+      "basis": "QUALIFY → DECIDE → DESIGN → DELIVER → AUDIT → EXPAND; current AUDIT, EXPAND not proven"
+    },
+    {
+      "id": "pre-build-reality",
+      "status": "ACTIVE",
+      "release_required": false,
+      "basis": "Pain and willingness-to-refuse mechanism is a hypothesis; uncoached need evidence"
+    },
+    {
+      "id": "competitive-novelty-kill",
+      "status": "ACTIVE",
+      "release_required": false,
+      "basis": "Collision/research not concluded"
+    },
+    {
+      "id": "ossium-oss-reference-intelligence",
+      "status": "N/A",
+      "release_required": false,
+      "basis": "No new third-party foundational engine being selected in this scoped iteration"
+    },
+    {
+      "id": "technical-reality",
+      "status": "ACTIVE",
+      "release_required": false,
+      "basis": "CI successful but meaningful load/recovery testing incomplete"
+    },
+    {
+      "id": "truth-boundary",
+      "status": "ACTIVE",
+      "release_required": false,
+      "basis": "Separate LIVE staging, CI, preview metadata, and UNKNOWN"
+    },
+    {
+      "id": "negative-path",
+      "status": "BLOCKED",
+      "release_required": true,
+      "basis": "Expired, duplicate, stolen browser token, URL, offline and recovery not proven live"
+    },
+    {
+      "id": "evidence-integrity",
+      "status": "ACTIVE",
+      "release_required": false,
+      "basis": "Do not treat screenshots, share sheets or simulated votes as LIVE adoption"
+    },
+    {
+      "id": "eval-driven-reliability",
+      "status": "ACTIVE",
+      "release_required": false,
+      "basis": "Unit contract tests exist; repeated database trajectory/recovery runs absent"
+    },
+    {
+      "id": "runtime-commit-binding",
+      "status": "BLOCKED",
+      "release_required": true,
+      "basis": "Exact PRODUCTION build/SHA and live deployed loop not demonstrated"
+    },
+    {
+      "id": "deterministic-demo",
+      "status": "N/A",
+      "release_required": false,
+      "basis": "No judge replay requirement; proof must remain real"
+    },
+    {
+      "id": "judge-performance",
+      "status": "ACTIVE",
+      "release_required": false,
+      "basis": "Readable/compelling Day Challenge story and media need independent review"
+    },
+    {
+      "id": "live-core-loop-staging",
+      "status": "PROVEN",
+      "release_required": false,
+      "basis": "PROVEN twice by external automated Chromium FR→EN runs on public Preview, real Neon committed and erased; human value UNKNOWN",
+      "evidence": {
+        "classification": "LIVE",
+        "scope": "staging",
+        "artifact": "evidence/LE-RECU-LIVE-BETA-E2E-2026-10-09.md",
+        "verified_at": "2026-10-09",
+        "method": "Two external Playwright Chromium contexts on public Vercel Preview; real Neon A→B duplex, FR/EN and participant-authorized deletion",
+        "commit": "2ffb3020bc7b59173348d2dfa8443e91ba1593ea",
+        "runtime_url": "https://le-recu-invite-beta-git-build-duplex-b-ec73a7-faadil1s-projects.vercel.app/",
+        "limits": "Two automated happy-path runs only; no human user adoption, reliability or production claim"
+      }
+    },
+    {
+      "id": "live-core-loop-production",
+      "status": "BLOCKED",
+      "release_required": true,
+      "basis": "No real stable public domain production A→B path"
+    },
+    {
+      "id": "load-bearing-integration-staging",
+      "status": "PROVEN",
+      "release_required": false,
+      "basis": "Neon staging stores duel rows and commits actual second decision",
+      "evidence": {
+        "classification": "LIVE",
+        "scope": "staging",
+        "artifact": "evidence/LE-RECU-LIVE-CORE-LOOP-2026-10-09.md",
+        "verified_at": "2026-10-09",
+        "method": "Neon SQL readback + supplied cross-browser flow",
+        "limits": "One completed duet / two browser tokens; not proof of distinct people, adoption, public readiness"
+      }
+    },
+    {
+      "id": "load-bearing-integration-production",
+      "status": "BLOCKED",
+      "release_required": true,
+      "basis": "Production database and functioning production API loop not proven"
+    },
+    {
+      "id": "real-consequence-production",
+      "status": "BLOCKED",
+      "release_required": true,
+      "basis": "No verified public persisted choice→reply→reveal consequence"
+    },
+    {
+      "id": "representative-paths",
+      "status": "BLOCKED",
+      "release_required": true,
+      "basis": "Automated happy path and user-initiated deletion succeeded twice; negative, race, timeout, stale and dependency recovery paths remain untested"
+    },
+    {
+      "id": "negative-recovery-production",
+      "status": "BLOCKED",
+      "release_required": true,
+      "basis": "Retries, duplicate race, stale browser/storage, Vercel outage and expiry need observed outcomes"
+    },
+    {
+      "id": "external-user-evidence",
+      "status": "BLOCKED",
+      "release_required": true,
+      "basis": "Independent uncoached external people have not completed a verified chain"
+    },
+    {
+      "id": "product-depth-max-exploitation",
+      "status": "ACTIVE",
+      "release_required": false,
+      "basis": "Vertical slice is entry, not done; deeper ongoing value exploration required"
+    },
+    {
+      "id": "shared-product-core",
+      "status": "ACTIVE",
+      "release_required": false,
+      "basis": "Receipt, duel and share use one choice catalogue; audit all alternate experiences"
+    },
+    {
+      "id": "real-user-surface",
+      "status": "ACTIVE",
+      "release_required": false,
+      "basis": "Preview user surface exists; stable public onboarding absent"
+    },
+    {
+      "id": "operator-surface-observability",
+      "status": "BLOCKED",
+      "release_required": true,
+      "basis": "Cannot manage stuck duels, abuse or safely observe operations"
+    },
+    {
+      "id": "time-to-first-value",
+      "status": "BLOCKED",
+      "release_required": true,
+      "basis": "No outside-user measured completion/abandonment journey"
+    },
+    {
+      "id": "operational-economics",
+      "status": "BLOCKED",
+      "release_required": true,
+      "basis": "DB, cold start, growth traffic, storage limits and abuse cost unmeasured"
+    },
+    {
+      "id": "reproducibility-clean-room",
+      "status": "BLOCKED",
+      "release_required": true,
+      "basis": "Clean-room fresh device / external dependency failure tests absent"
+    },
+    {
+      "id": "growth-distribution",
+      "status": "BLOCKED",
+      "release_required": true,
+      "basis": "Exported PNG and share-sheet are not a playable stable public entry"
+    },
+    {
+      "id": "identity-permissions",
+      "status": "ACTIVE",
+      "release_required": false,
+      "basis": "Browser tokens are pseudonyms, not verified persons"
+    },
+    {
+      "id": "privacy-consent-retention",
+      "status": "BLOCKED",
+      "release_required": true,
+      "basis": "Beta explains current open-ended retention; explicit room opt-in and participant deletion implemented and exercised by automation, but no guaranteed purge or privacy operations"
+    },
+    {
+      "id": "anti-abuse-sybil-rate-limits",
+      "status": "BLOCKED",
+      "release_required": true,
+      "basis": "Token-reset, fake room totals and mass invite spam not mitigated"
+    },
+    {
+      "id": "cross-language-live",
+      "status": "BLOCKED",
+      "release_required": true,
+      "basis": "FR/EN code tests exist, uncoached mixed-locale device flow not verified"
+    },
+    {
+      "id": "accessibility-mobile-performance",
+      "status": "BLOCKED",
+      "release_required": true,
+      "basis": "Mobile, screen reader, reduced motion and export-device matrix unverified"
+    },
+    {
+      "id": "public-entry-domain",
+      "status": "BLOCKED",
+      "release_required": true,
+      "basis": "Public Vercel Preview is externally readable and two A→B automated runs succeed; safe production domain, privacy/abuse and human onboarding remain BLOCKED"
+    },
+    {
+      "id": "safe-share-preview-semantics",
+      "status": "BLOCKED",
+      "release_required": true,
+      "basis": "Public share cards and OG should not disclose choices prematurely"
+    },
+    {
+      "id": "chain-continuation-live",
+      "status": "BLOCKED",
+      "release_required": true,
+      "basis": "Third recipient invitation completion after a prior duel unobserved"
+    },
+    {
+      "id": "organic-usage-adoption",
+      "status": "BLOCKED",
+      "release_required": false,
+      "basis": "No representative organic usage; not equivalent to one browser demo"
+    },
+    {
+      "id": "x402",
+      "status": "N/A",
+      "release_required": false,
+      "basis": "No payment-gateway value in product"
+    },
+    {
+      "id": "nanopayments",
+      "status": "N/A",
+      "release_required": false,
+      "basis": "No nanopayment feature"
+    },
+    {
+      "id": "wallets",
+      "status": "N/A",
+      "release_required": false,
+      "basis": "No wallet identity or monetary custody"
+    },
+    {
+      "id": "contracts",
+      "status": "N/A",
+      "release_required": false,
+      "basis": "No on-chain smart contracts"
+    },
+    {
+      "id": "live-gateway",
+      "status": "N/A",
+      "release_required": false,
+      "basis": "No payment gateway; reactivate if a fee or unlock is introduced"
+    }
+  ]
+}

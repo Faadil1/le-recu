@@ -1,0 +1,23 @@
+name: LE REÇU — Product CI
+on:
+  pull_request:
+  push:
+    branches:
+      - build/duplex-blind-duel-v1
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run product:check
+      # The generated Grok sandbox suite references .grok/skills excluded from this repository.
+      # Run a dedicated, reproducible app test suite. Keep npm test unchanged as legacy debt.
+      - run: npm run test:product
+      - run: npm run build
