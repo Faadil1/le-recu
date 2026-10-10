@@ -19,7 +19,7 @@
     "test": "node --test 'scripts/**/*.test.mjs' && node --experimental-strip-types --test src/lib/app-data/app-data.test.ts src/lib/app-data/readiness-schedule.test.ts src/lib/auth/gate-identity.test.ts src/lib/auth/sign-in-gate.test.ts src/lib/duel-contract.test.ts src/lib/locale.test.ts",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "test:product": "node --test scripts/check-product-reality.test.mjs && node --experimental-strip-types --test src/lib/duel-contract.test.ts src/lib/locale.test.ts",
+    "test:product": "node --test scripts/check-product-reality.test.mjs && node --experimental-strip-types --test src/lib/duel-contract.test.ts src/lib/locale.test.ts src/lib/beta-limits.test.ts",
     "db:verify": "node scripts/db-verify.mjs",
     "product:check": "node scripts/check-product-reality.mjs --review",
     "product:release-check": "node scripts/check-product-reality.mjs --release"
