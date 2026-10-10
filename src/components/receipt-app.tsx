@@ -15,7 +15,7 @@ import {
 } from "@/lib/receipt"
 import { castStrike, readRoom } from "@/lib/room.functions"
 import { createDuel, readDuel, answerDuel } from "@/lib/duel.functions"
-import type { DuelView } from "@/lib/duel-contract"
+import { canonicalSelections, type DuelView } from "@/lib/duel-contract"
 import { makeDuplexPoster } from "@/lib/duel-image"
 import { DuplexResult } from "@/components/duplex-result"
 import { CATEGORY, challengeCopy, duelCopy, localizedCost, localizedDesire, localizedServerError, parseLocale, t, type Locale } from "@/lib/locale"
@@ -209,6 +209,7 @@ export function ReceiptApp() {
   const myLabel=mine!==null&&lines[mine]?localizedCost(lines[mine],locale).label:""
   const theirLabel=theirs!==null&&reveal&&lines[theirs]?localizedCost(lines[theirs],locale).label:""
   const same = reveal && mine !== null && mine === theirs
+  const ordered = canonicalSelections(duelRole, mine, theirs)
 
   useEffect(() => {
     let cancelled = false
@@ -476,13 +477,18 @@ export function ReceiptApp() {
   }
 
   async function downloadDuelPoster() {
-    if (mine === null || theirs === null || posterBusy) return
+    if (!ordered || posterBusy) return
     setPosterBusy(true)
     setDuelError("")
     try {
+      const first = lines[ordered.first]
+      const second = lines[ordered.second]
+      if (!first || !second) throw new Error(words.errorExport)
       const blob = await makeDuplexPoster({
-        desire:shownDesire,mine:myLabel,theirs:theirLabel,locale,
-        timestamp: createdAt, number: receiptNo(seed),
+        desire: shownDesire,
+        first: localizedCost(first, locale).label,
+        second: localizedCost(second, locale).label,
+        locale, timestamp: createdAt, number: receiptNo(seed),
       })
       const file = new File([blob], "le-recu-duplex.png", { type: "image/png" })
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
@@ -525,6 +531,7 @@ export function ReceiptApp() {
       ? words.kickerBlind : mine !== null ? words.kickerReady : words.kickerToday
 
   const locked = mine !== null || spectacle || busy || (duelId !== null && duelStatus !== "pending")
+  const canAdvance = mine !== null && theirs === null && (duelStatus === "none" || duelRole === "owner")
 
   if (!booted) {
     return (
@@ -538,7 +545,7 @@ export function ReceiptApp() {
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-4 pt-5 pb-12">
+    <main className={`mx-auto flex min-h-dvh w-full max-w-md flex-col px-4 pt-5 ${canAdvance ? "pb-36" : "pb-12"}`}>
       <div className="flex items-center justify-between gap-3">
         <p className="text-xs tracking-widest text-paper/50">{kicker}</p>
         <div role="group" aria-label="Langue / Language" className="flex gap-1" data-language>
@@ -784,6 +791,19 @@ export function ReceiptApp() {
           </form>
         ) : null}
       </div>
+
+      {canAdvance ? (
+        <aside className="fixed inset-x-0 bottom-0 z-40 border-t border-paper/20 bg-carbon/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-md md:hidden" aria-label={words.nextStep}>
+          <div className="mx-auto flex max-w-md items-center gap-3">
+            <span className="max-w-24 shrink-0 text-[10px] leading-tight tracking-widest text-paper/70">{words.nextStep}</span>
+            <button type="button" disabled={busy}
+              className="tap min-h-12 flex-1 bg-paper px-3 text-sm font-medium text-ink disabled:opacity-50"
+              onClick={() => void defy()}>
+              {busyAction === "seal" ? words.sealing : busyAction === "share" ? words.sharing : duelId ? words.send : words.seal}
+            </button>
+          </div>
+        </aside>
+      ) : null}
 
       {historyRows.length > 0 ? (
         <section className="mt-12">
