@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start"
 import { z } from "zod"
 import { dailySeedFor, deckDesire, tallyRoom, type RoomTally } from "@/lib/receipt"
+import { consumeBetaBudget } from "@/lib/beta-limits"
 
 const empty: RoomTally = { total: 0, counts: [0, 0, 0, 0, 0], top: null }
 
@@ -57,6 +58,15 @@ export const castStrike = createServerFn({ method: "POST" })
       return countsFor(desire)
     }
     const sql = await roomSql()
+    // Consent must be expressed by the caller before invoking castStrike.
+    // A duplicate committed actor/day row should not consume another quota.
+    const exists=await sql<{already:number}>`
+      select 1 as already from strikes
+      where day=${day} and desire=${desire} and token=${data.token}
+      limit 1
+    `
+    if (exists.length > 0) return countsFor(desire)
+    await consumeBetaBudget(sql, "room-strike", data.token, Date.now())
     await sql`
       insert into strikes (day, desire, line, token)
       values (${day}, ${desire}, ${data.line}, ${data.token})
