@@ -14,7 +14,7 @@ import {
   type RoomTally,
 } from "@/lib/receipt"
 import { castStrike, readRoom } from "@/lib/room.functions"
-import { createDuel, readDuel, answerDuel } from "@/lib/duel.functions"
+import { createDuel, readDuel, answerDuel, eraseDuel } from "@/lib/duel.functions"
 import { canonicalSelections, type DuelView } from "@/lib/duel-contract"
 import { makeDuplexPoster } from "@/lib/duel-image"
 import { DuplexResult } from "@/components/duplex-result"
@@ -201,6 +201,8 @@ export function ReceiptApp() {
   const [busyAction, setBusyAction] = useState<"seal" | "share" | "check" | "reply" | null>(null)
   const [responseChecked, setResponseChecked] = useState(false)
   const [posterBusy, setPosterBusy] = useState(false)
+  const [eraseBusy, setEraseBusy] = useState(false)
+  const [eraseNotice, setEraseNotice] = useState("")
   const [duelError, setDuelError] = useState("")
 
   const lines = useMemo(() => (desire ? generateLines(desire, seed) : []), [desire, seed])
@@ -337,6 +339,7 @@ export function ReceiptApp() {
     setCopied("idle")
     setRoom(null)
     setRoomJoined(false)
+    setEraseNotice("")
     resetDuel()
     window.scrollTo({ top: 0, behavior: "auto" })
   }
@@ -406,6 +409,31 @@ export function ReceiptApp() {
     } catch(error) {
       setDuelError(error instanceof Error ? localizedServerError(error.message,locale) : words.unavailable)
     } finally { setRoomSubmitting(false) }
+  }
+
+  async function eraseCurrentDuel() {
+    if (!duelId || eraseBusy || (duelRole !== "owner" && duelRole !== "responder")) return
+    if (!window.confirm(words.eraseConfirm)) return
+    const token=voterToken()
+    if (!token) {setDuelError(words.storage);return}
+    setEraseBusy(true)
+    setDuelError("")
+    setEraseNotice("")
+    try {
+      const result=await eraseDuel({data:{id:duelId,token}})
+      if (!result.erased) throw new Error(words.eraseFailed)
+      const saved=loadHistory().filter(row=>
+        !(row.d===desire && row.s===seed && row.x===mine)
+      )
+      try {localStorage.setItem(HISTORY_KEY,JSON.stringify(saved))} catch { /* optional local cache */ }
+      setHistoryRows(saved)
+      issue(desire)
+      setEraseNotice(words.eraseSuccess)
+    } catch(error) {
+      setDuelError(error instanceof Error && error.message===words.eraseFailed
+        ? words.eraseFailed
+        : error instanceof Error ? localizedServerError(error.message,locale) : words.eraseFailed)
+    } finally {setEraseBusy(false)}
   }
 
   async function writeShare(text: string, url: string) {
@@ -759,6 +787,14 @@ export function ReceiptApp() {
             {words.copyDuel}
           </button>
         ) : null}
+        {duelId && (duelRole === "owner" || duelRole === "responder") ? (
+          <button type="button" disabled={eraseBusy || busy}
+            className="tap min-h-12 w-full border border-stamp/60 text-sm text-paper/85 disabled:opacity-50"
+            onClick={() => void eraseCurrentDuel()}>
+            {eraseBusy ? words.erasing : words.erase}
+          </button>
+        ) : null}
+        {eraseNotice ? <p role="status" className="text-center text-sm text-paper/75">{eraseNotice}</p> : null}
         {copied === "ok" ? <p role="status" className="text-center text-sm text-paper/70">{words.copied}</p> : null}
         {copied === "fail" ? (
           <pre className="overflow-x-auto text-xs leading-normal whitespace-pre-wrap text-paper/75">{shareBlock}</pre>
