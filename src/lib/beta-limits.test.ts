@@ -7,7 +7,7 @@ function fakeSql() {
   // Pure-state simulation of the unique-index SQL clause, not a live DB test.
   const counters=new Map<string,number>()
   const sql=(async (_parts:TemplateStringsArray,...values:unknown[])=>{
-    const [scope,day,key,_used,max]=values
+    const [scope,day,key,max]=values
     const id=`${scope}/${day}/${key}`
     const old=counters.get(id)??0
     if(old>=Number(max))return []
