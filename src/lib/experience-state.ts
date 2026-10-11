@@ -9,3 +9,10 @@ export function experiencePhase(v:PhaseInput):Phase {
   return v.mine!==null ? 'seal' : 'choose'
 }
 export const verifiedReveal = (v:PhaseInput):boolean => experiencePhase(v)==='reveal'
+
+// A sealed, expired or closed invite is not another shareable live challenge.
+export function canAdvanceChoice(v:PhaseInput):boolean {
+  if(v.mine===null || v.theirs!==null) return false
+  if(v.id===null) return v.status==="none"
+  return v.role==="owner" && v.status==="pending"
+}
