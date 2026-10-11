@@ -1,5 +1,5 @@
 import assert from "node:assert/strict"
-import { mkdirSync } from "node:fs"
+import { mkdirSync, readFileSync } from "node:fs"
 import { chromium } from "playwright"
 
 const BASE=process.env.LIVE_BETA_URL
@@ -23,7 +23,11 @@ try {
   await a.goto(BASE,{waitUntil:"domcontentloaded",timeout:30000})
   await waitReceipt(a)
   assert.match(await a.locator("[data-receipt] h1").innerText(),/«|»/)
+  assert.equal(await a.locator(".journey-rail [aria-current=step]").count(),1)
+  assert.match(await a.locator(".journey-rail [aria-current=step]").innerText(),/CH/)
+// The design stage must reflect real actions, not a fake completed demo.
   await a.locator(".line-btn").first().click()
+  assert.match(await a.locator(".journey-rail [aria-current=step]").innerText(),/SCELLER/)
   await a.locator("[data-actions]").getByRole("button",{name:"Sceller mon choix"}).click()
   await a.locator("[data-actions]").getByRole("button",{name:"Envoyer le défi"}).waitFor({state:"visible",timeout:30000})
   invite=a.url()
@@ -35,6 +39,8 @@ try {
 
   await b.goto(invite,{waitUntil:"domcontentloaded",timeout:30000})
   await waitReceipt(b)
+  assert.equal(await b.locator(".duplex-imprint").count(),0,"recipient sees no fake reveal")
+  assert.equal(await b.locator("[data-receipt] .line-through").count(),0,"no creator refusal leaked before response")
   await b.getByRole("button",{name:"EN",exact:true}).click()
   const english=await b.locator("[data-receipt] h1").innerText()
   assert.ok(english.includes("“"),"recipient should see the translated heading")
@@ -48,6 +54,7 @@ try {
   await a.locator(".duplex-imprint").waitFor({state:"visible",timeout:30000})
   const frOutcome=await a.locator(".duplex-imprint").innerText()
   assert.match(frOutcome,/DEUX SIGNATURES/)
+  assert.match(await a.locator(".journey-rail [aria-current=step]").innerText(),/RÉVÉLER/)
 
   // Confirm the actual first/second positions have a canonical, owner-independent
   // ordering in the exported artworks. Canvas PNG export uses the same roles.
@@ -69,6 +76,21 @@ try {
   const file=await ownerDownload
   assert.match(file.suggestedFilename(),/le-recu-duplex.*\.png/)
   await file.saveAs("playwright-artifacts/duplex-poster-fr.png")
+  const png=readFileSync("playwright-artifacts/duplex-poster-fr.png")
+  assert.equal(png.subarray(1,4).toString(),"PNG","export must be actual PNG")
+  assert.equal(png.readUInt32BE(16),1080)
+  assert.equal(png.readUInt32BE(20),1350)
+  // A third, non-participant browser gets only the closed state, never the
+  // two other people's private refusal choices.
+  const outsider=await browser.newContext({locale:"en-US"})
+  const outsiderPage=await outsider.newPage()
+  try{
+    await outsiderPage.goto(invite,{waitUntil:"domcontentloaded",timeout:30000})
+    await waitReceipt(outsiderPage)
+    assert.equal(await outsiderPage.locator(".duplex-imprint").count(),0)
+    assert.equal(await outsiderPage.locator(".journey-rail [aria-current=step]").count(),0)
+    assert.ok(await outsiderPage.getByRole("button",{name:"Print a fresh receipt"}).count()>0)
+  }finally{await outsider.close()}
   console.log("LIVE STAGING BETA PASS: external FR creator → EN recipient → Neon reply → both duplex views → PNG generated.")
 } finally {
   if (invite) {
