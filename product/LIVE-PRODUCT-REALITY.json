@@ -81,16 +81,16 @@
       "id": "live-core-loop-staging",
       "status": "PROVEN",
       "release_required": false,
-      "basis": "PROVEN twice by external automated Chromium FR→EN runs on public Preview, real Neon committed and erased; human value UNKNOWN",
+      "basis": "V1.3 live public Preview FR→EN two-browser commit, both actual posters, third guest denied and server deletion, all automated. User adoption still UNKNOWN.",
       "evidence": {
         "classification": "LIVE",
         "scope": "staging",
-        "artifact": "evidence/LE-RECU-LIVE-BETA-E2E-2026-10-09.md",
-        "verified_at": "2026-10-09",
-        "method": "Two external Playwright Chromium contexts on public Vercel Preview; real Neon A→B duplex, FR/EN and participant-authorized deletion",
-        "commit": "2ffb3020bc7b59173348d2dfa8443e91ba1593ea",
+        "artifact": "evidence/LE-RECU-V1-3-LIVE-VISUAL-QA-2026-10-11.md",
+        "verified_at": "2026-10-11",
+        "method": "Independent Chromium browser contexts against deployed Vercel Preview; Neon create/read/reply/erase; FR/EN 4:5 PNG visual QA; outsider denied",
+        "commit": "6dd6ea12750bfc351a64b387bba7b46ef5829171",
         "runtime_url": "https://le-recu-invite-beta-git-build-duplex-b-ec73a7-faadil1s-projects.vercel.app/",
-        "limits": "Two automated happy-path runs only; no human user adoption, reliability or production claim"
+        "limits": "Automated happy-path and outsider negative only, not hardware iOS, third-human growth, reliability, full privacy or production"
       }
     },
     {
