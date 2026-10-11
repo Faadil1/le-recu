@@ -16,6 +16,7 @@ import {
 import { castStrike, readRoom } from "@/lib/room.functions"
 import { createDuel, readDuel, answerDuel, eraseDuel } from "@/lib/duel.functions"
 import { canonicalSelections, type DuelView } from "@/lib/duel-contract"
+import { experiencePhase } from "@/lib/experience-state"
 import { makeDuplexPoster } from "@/lib/duel-image"
 import { DuplexResult } from "@/components/duplex-result"
 import { CATEGORY, challengeCopy, duelCopy, localizedCost, localizedDesire, localizedServerError, parseLocale, t, type Locale } from "@/lib/locale"
@@ -206,7 +207,8 @@ export function ReceiptApp() {
   const [duelError, setDuelError] = useState("")
 
   const lines = useMemo(() => (desire ? generateLines(desire, seed) : []), [desire, seed])
-  const reveal = spectacle || (mine !== null && theirs !== null)
+  const phase = experiencePhase({id:duelId,role:duelRole,status:duelStatus,mine,theirs})
+  const reveal = phase === "reveal"
   const shown = useMemo(() => present(lines, mine, theirs, reveal), [lines, mine, theirs, reveal])
   const words=t(locale)
   const shownDesire=localizedDesire(desire,locale)
@@ -578,6 +580,10 @@ export function ReceiptApp() {
 
   const locked = mine !== null || spectacle || busy || (duelId !== null && duelStatus !== "pending")
   const canAdvance = mine !== null && theirs === null && (duelStatus === "none" || duelRole === "owner")
+  const flowLabels=[words.stepChoose, words.stepSeal,
+    phase === "reply" ? words.stepReply : words.stepWaiting,words.stepReveal]
+  const flowAt = phase === "choose" ? 0 : phase === "seal" ? 1
+    : phase === "reveal" ? 3 : 2
 
   if (!booted) {
     return (
@@ -591,7 +597,13 @@ export function ReceiptApp() {
   }
 
   return (
-    <main className={`mx-auto flex min-h-dvh w-full max-w-md flex-col px-4 pt-5 ${canAdvance ? "pb-36" : "pb-12"}`}>
+    <main className={`receipt-world mx-auto flex min-h-dvh w-full max-w-md flex-col px-4 pt-5 ${canAdvance ? "pb-44" : "pb-12"}`}>
+      <aside aria-hidden="true" className="editorial-side">
+        <span className="editorial-serial">{words.edition}</span>
+        <strong>{words.typographyLead}</strong>
+        <em>{words.typographyClose}</em>
+        <span className="editorial-rule" />
+      </aside>
       <div className="flex items-center justify-between gap-3">
         <p className="text-xs tracking-widest text-paper/50">{kicker}</p>
         <div role="group" aria-label="Langue / Language" className="flex gap-1" data-language>
@@ -604,6 +616,15 @@ export function ReceiptApp() {
           ))}
         </div>
       </div>
+      <nav aria-label={words.journey} className="journey-rail mt-4" data-phase={phase}>
+        {flowLabels.map((label,index)=>(
+          <span key={index} aria-current={index===flowAt?"step":undefined}
+            className={`journey-step ${index===flowAt?"journey-active":index<flowAt?"journey-past":""}`}>
+            <span className="journey-tick" aria-hidden="true" />
+            <span>{label}</span>
+          </span>
+        ))}
+      </nav>
       {duelError ? <p role="alert" className="mt-3 border border-stamp px-3 py-3 text-sm leading-normal text-paper">{duelError}</p> : null}
       {duelId && duelRole === "owner" && duelStatus === "pending" ? (
         <p className="mt-3 text-xs text-paper/55">{words.pending}</p>
@@ -613,9 +634,15 @@ export function ReceiptApp() {
           {duelStatus === "expired" ? words.expired : words.closed}
         </p>
       ) : null}
+      {(phase==="unavailable" || (duelError && duelFromUrl() && !duelId)) ? (
+        <button type="button" onClick={()=>issue(desire)}
+          className="tap mt-3 min-h-12 w-full border border-paper/50 text-sm text-paper">
+          {words.recover}
+        </button>
+      ) : null}
 
       <div key={`${desire}-${seed}-${theirs ?? "x"}`} data-receipt className="paper-in mt-3">
-        <article className="paper px-4 pt-4 pb-4">
+        <article className="paper receipt-sheet px-4 pt-4 pb-4" data-paper-state={phase}>
           <header className="flex items-baseline justify-between gap-3">
             <p className="font-display text-xl font-semibold tracking-wide">{words.title}</p>
             <p className="text-xs text-ink/55 tabular-nums">Nº {receiptNo(seed)}</p>
@@ -631,10 +658,13 @@ export function ReceiptApp() {
             {quote(shownDesire,locale)}
           </h1>
           <p className="mt-2 text-sm leading-normal text-pretty text-ink/70">{sub}</p>
-          {!reveal ? (
-            <p className="mt-3 border-l-2 border-stamp/55 pl-3 text-xs leading-relaxed text-ink/65">
-              {duelId && duelRole === "guest" ? words.betaGuest : words.betaNotice}
-            </p>
+          {phase==="choose" ? (
+            <p className="reading-cue mt-3">{words.selectionHint}</p>
+          ) : phase==="seal" ? (
+            <p className="reading-cue mt-3">{words.afterChoice}</p>
+          ) : null}
+          {phase==="reply" ? (
+            <p className="mt-3 border-l-2 border-stamp/55 pl-3 text-xs leading-relaxed text-ink/65">{words.betaGuest}</p>
           ) : null}
           <ul className="lines mt-4 divide-y divide-ink/10">
             {shown.map((line, index) => (
@@ -672,6 +702,11 @@ export function ReceiptApp() {
               </li>
             ))}
           </ul>
+          {mine !== null && duelRole !== "responder" && (phase==="seal" || phase==="waiting") ? (
+            <p className="mt-4 border-l-2 border-stamp/55 pl-3 text-xs leading-relaxed text-ink/65">
+              {words.betaNotice}
+            </p>
+          ) : null}
           {mine !== null || theirs !== null ? (
           <div className="flex items-center justify-center py-4" aria-live="polite">
             {mine === null && theirs !== null ? (
@@ -733,7 +768,8 @@ export function ReceiptApp() {
         <div className="paper-teeth" aria-hidden="true" />
       </div>
 
-      <div data-actions className="mt-6 flex flex-col gap-3">
+      <div data-actions className="action-block mt-6 flex flex-col gap-3">
+        <p className="action-eyebrow">{words.actionLabel}</p>
         {mine !== null && theirs === null ? (
           <button type="button" disabled={busy} className="tap h-12 w-full bg-paper text-sm font-medium text-ink disabled:opacity-50" onClick={() => void defy()}>
             {busy && busyAction === "share" ? words.sharing : busy && busyAction === "seal" ? words.sealing : duelId ? words.send : words.seal}
@@ -863,7 +899,8 @@ export function ReceiptApp() {
       </div>
 
       {canAdvance ? (
-        <aside className="fixed inset-x-0 bottom-0 z-40 border-t border-paper/20 bg-carbon/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-md md:hidden" aria-label={words.nextStep}>
+        <aside className="mobile-next fixed inset-x-0 bottom-0 z-40 border-t border-paper/20 bg-carbon/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-md md:hidden" aria-label={words.nextStep}>
+          <p className="mx-auto mb-2 max-w-md text-[10px] leading-snug text-paper/70">{words.betaNoticeShort}</p>
           <div className="mx-auto flex max-w-md items-center gap-3">
             <span className="max-w-24 shrink-0 text-[10px] leading-tight tracking-widest text-paper/70">{words.nextStep}</span>
             <button type="button" disabled={busy}
