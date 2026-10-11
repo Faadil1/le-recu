@@ -49,12 +49,16 @@ try {
   assert.match(await b.locator(".duplex-imprint").innerText(),/TWO SIGNATURES/)
   const enOutcome=await b.locator(".duplex-imprint").innerText()
   assert.match(enOutcome,/NOT THE SAME LINE|SAME REFUSAL/)
+  assert.equal(await b.locator(".room-drawer").count(),1)
+  assert.equal(await b.locator(".room-drawer").getAttribute("open"),null,"community room stays opt-in")
+  assert.equal(await b.locator(".receipt-sheet").getByText("NO RESPONSES YET").count(),0)
 
   await a.locator("[data-actions]").getByRole("button",{name:"Vérifier la réponse"}).click()
   await a.locator(".duplex-imprint").waitFor({state:"visible",timeout:30000})
   const frOutcome=await a.locator(".duplex-imprint").innerText()
   assert.match(frOutcome,/DEUX SIGNATURES/)
   assert.match(await a.locator(".journey-rail [aria-current=step]").innerText(),/RÉVÉLER/)
+  assert.ok(await a.locator(".mobile-next").getByRole("button",{name:"Partager l'image du duo"}).isVisible())
 
   // Confirm the actual first/second positions have a canonical, owner-independent
   // ordering in the exported artworks. Canvas PNG export uses the same roles.
@@ -80,6 +84,13 @@ try {
   assert.equal(png.subarray(1,4).toString(),"PNG","export must be actual PNG")
   assert.equal(png.readUInt32BE(16),1080)
   assert.equal(png.readUInt32BE(20),1350)
+  const englishDownload=b.waitForEvent("download",{timeout:25000})
+  await b.locator("[data-actions]").getByRole("button",{name:"Share the duo image"}).click()
+  const englishPoster=await englishDownload
+  await englishPoster.saveAs("playwright-artifacts/duplex-poster-en.png")
+  const pngEN=readFileSync("playwright-artifacts/duplex-poster-en.png")
+  assert.equal(pngEN.readUInt32BE(16),1080)
+  assert.equal(pngEN.readUInt32BE(20),1350)
   // A third, non-participant browser gets only the closed state, never the
   // two other people's private refusal choices.
   const outsider=await browser.newContext({locale:"en-US"})
