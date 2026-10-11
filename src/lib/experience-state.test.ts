@@ -1,6 +1,6 @@
 import test from "node:test"
 import assert from "node:assert/strict"
-import { experiencePhase, verifiedReveal, type PhaseInput } from "./experience-state.ts"
+import { canAdvanceChoice, experiencePhase, verifiedReveal, type PhaseInput } from "./experience-state.ts"
 
 const base:PhaseInput={id:null,role:"guest",status:"none",mine:null,theirs:null}
 test("no participant is invented by an old local-only display state",()=>{
@@ -24,4 +24,12 @@ test("expired, invalid and closed challenges cannot masquerade as active",()=>{
   for(const status of ["expired","closed","missing"] as const){
     assert.equal(experiencePhase({...base,id:"invite",role:"guest",status}),"unavailable")
   }
+})
+
+test("closed/expired challenges cannot be reshared as open invitations",()=>{
+  assert.equal(canAdvanceChoice({...base,mine:1}),true)
+  assert.equal(canAdvanceChoice({...base,id:"inv",role:"owner",status:"pending",mine:1}),true)
+  assert.equal(canAdvanceChoice({...base,id:"inv",role:"owner",status:"expired",mine:1}),false)
+  assert.equal(canAdvanceChoice({...base,id:"inv",role:"owner",status:"closed",mine:1}),false)
+  assert.equal(canAdvanceChoice({...base,id:"inv",role:"guest",status:"pending",mine:1}),false)
 })
