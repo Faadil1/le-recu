@@ -16,7 +16,7 @@ import {
 import { castStrike, readRoom } from "@/lib/room.functions"
 import { createDuel, readDuel, answerDuel, eraseDuel } from "@/lib/duel.functions"
 import { canonicalSelections, type DuelView } from "@/lib/duel-contract"
-import { experiencePhase } from "@/lib/experience-state"
+import { canAdvanceChoice, experiencePhase } from "@/lib/experience-state"
 import { makeDuplexPoster } from "@/lib/duel-image"
 import { DuplexResult } from "@/components/duplex-result"
 import { CATEGORY, challengeCopy, duelCopy, localizedCost, localizedDesire, localizedServerError, parseLocale, t, type Locale } from "@/lib/locale"
@@ -573,16 +573,16 @@ export function ReceiptApp() {
       ? words.hidden
       : duelId && duelRole === "owner" ? words.owner
         : mine !== null ? words.decided : words.intro
-  const kicker = reveal
+  const kicker = phase==="unavailable" ? words.stepUnavailable : reveal
     ? same ? words.kickerSame : words.kickerDifferent
     : duelId && duelRole === "guest" && duelStatus === "pending"
       ? words.kickerBlind : mine !== null ? words.kickerReady : words.kickerToday
 
   const locked = mine !== null || spectacle || busy || (duelId !== null && duelStatus !== "pending")
-  const canAdvance = mine !== null && theirs === null && (duelStatus === "none" || duelRole === "owner")
+  const canAdvance = canAdvanceChoice({id:duelId,role:duelRole,status:duelStatus,mine,theirs})
   const flowLabels=[words.stepChoose, words.stepSeal,
     phase === "reply" ? words.stepReply : words.stepWaiting,words.stepReveal]
-  const flowAt = phase === "choose" ? 0 : phase === "seal" ? 1
+  const flowAt = phase==="unavailable" ? -1 : phase === "choose" ? 0 : phase === "seal" ? 1
     : phase === "reveal" ? 3 : 2
 
   if (!booted) {
@@ -770,7 +770,7 @@ export function ReceiptApp() {
 
       <div data-actions className="action-block mt-6 flex flex-col gap-3">
         <p className="action-eyebrow">{words.actionLabel}</p>
-        {mine !== null && theirs === null ? (
+        {canAdvance ? (
           <button type="button" disabled={busy} className="tap h-12 w-full bg-paper text-sm font-medium text-ink disabled:opacity-50" onClick={() => void defy()}>
             {busy && busyAction === "share" ? words.sharing : busy && busyAction === "seal" ? words.sealing : duelId ? words.send : words.seal}
           </button>
