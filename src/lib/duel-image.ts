@@ -52,11 +52,11 @@ export async function makeDuplexPoster({ desire, first, second, timestamp, numbe
   ctx.beginPath();ctx.moveTo(122,532);ctx.lineTo(958,532);ctx.stroke()
   ctx.font=`22px ${mono}`
   ctx.fillText(words.first,124,595)
-  drawRefusal(ctx,first,123,680,815,64,serif,red,31)
+  drawRefusal(ctx,first,123,680,815,70,serif,red,31)
   ctx.font=`22px ${mono}`
   ctx.fillStyle=ink
   ctx.fillText(words.second,124,836)
-  drawRefusal(ctx,second,123,920,815,64,serif,red,73)
+  drawRefusal(ctx,second,123,920,815,70,serif,red,73)
   // Two slightly imperfect rings and an inset verdict give a deliberate
   // physical ink-stamp effect. No transcript or result is fabricated.
   const same=first===second
@@ -164,10 +164,10 @@ function drawInkStrike(ctx:CanvasRenderingContext2D,x:number,y:number,width:numb
   ctx.lineJoin="round"
   const end=x+width
   // Main bristle gesture: nearly horizontal, deliberately disciplined.
-  ctx.lineWidth=8.5
+  ctx.lineWidth=11.5
   ctx.beginPath();ctx.moveTo(x,y+3);ctx.bezierCurveTo(x+width*0.25,y-6,x+width*0.68,y+3,end,y-4);ctx.stroke()
-  ctx.globalAlpha=0.46
-  ctx.lineWidth=2.1
+  ctx.globalAlpha=0.56
+  ctx.lineWidth=2.8
   ctx.beginPath();ctx.moveTo(x-9,y+8);ctx.bezierCurveTo(x+width*0.25,y+1,x+width*0.65,y+8,end+11,y+1);ctx.stroke()
   ctx.globalAlpha=0.35
   ctx.lineWidth=1.25
