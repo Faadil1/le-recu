@@ -193,6 +193,7 @@ export function ReceiptApp() {
   const [shareBlock, setShareBlock] = useState("")
   const [room, setRoom] = useState<RoomTally | null>(null)
   const [roomJoined, setRoomJoined] = useState(false)
+  const [roomOpen, setRoomOpen] = useState(false)
   const [roomSubmitting, setRoomSubmitting] = useState(false)
   const [duelId, setDuelId] = useState<string | null>(null)
   const [duelRole, setDuelRole] = useState<DuelView["role"]>("guest")
@@ -270,7 +271,7 @@ export function ReceiptApp() {
   useEffect(() => {
     const today = new Date().toISOString().slice(0, 10)
     const issuedDay = createdAt > 0 ? new Date(createdAt).toISOString().slice(0, 10) : ""
-    if (!booted || mine === null || !deckDesire(desire) ||
+    if (!booted || !roomOpen || mine === null || !deckDesire(desire) ||
         dailySeedFor(desire) !== seed || today !== issuedDay) {
       setRoom(null)
       return
@@ -286,7 +287,7 @@ export function ReceiptApp() {
     return () => {
       cancel = true
     }
-  }, [booted, mine, desire, seed, createdAt])
+  }, [booted, roomOpen, mine, desire, seed, createdAt])
 
   useEffect(() => {
     if (!booted) return
@@ -341,6 +342,7 @@ export function ReceiptApp() {
     setCopied("idle")
     setRoom(null)
     setRoomJoined(false)
+    setRoomOpen(false)
     setEraseNotice("")
     resetDuel()
     window.scrollTo({ top: 0, behavior: "auto" })
@@ -395,6 +397,7 @@ export function ReceiptApp() {
     setCopied("idle")
     setRoom(null)
     setRoomJoined(false)
+    setRoomOpen(false)
     resetDuel()
   }
 
@@ -580,6 +583,7 @@ export function ReceiptApp() {
 
   const locked = mine !== null || spectacle || busy || (duelId !== null && duelStatus !== "pending")
   const canAdvance = canAdvanceChoice({id:duelId,role:duelRole,status:duelStatus,mine,theirs})
+  const canShareResult=phase==="reveal"&&ordered!==null
   const flowLabels=[words.stepChoose, words.stepSeal,
     phase === "reply" ? words.stepReply : words.stepWaiting,words.stepReveal]
   const flowAt = phase==="unavailable" ? -1 : phase === "choose" ? 0 : phase === "seal" ? 1
@@ -597,7 +601,7 @@ export function ReceiptApp() {
   }
 
   return (
-    <main className={`receipt-world mx-auto flex min-h-dvh w-full max-w-md flex-col px-4 pt-5 ${canAdvance ? "pb-44" : "pb-12"}`}>
+    <main className={`receipt-world mx-auto flex min-h-dvh w-full max-w-md flex-col px-4 pt-5 ${canAdvance || canShareResult ? "pb-44" : "pb-12"}`}>
       <aside aria-hidden="true" className="editorial-side">
         <span className="editorial-serial">{words.edition}</span>
         <strong>{words.typographyLead}</strong>
@@ -682,7 +686,7 @@ export function ReceiptApp() {
                       <span className="text-xs tracking-widest text-stamp">{line.theirs ? words.twoMarked : words.no}</span>
                     ) : line.theirs ? (
                       <span className="text-xs tracking-widest text-stamp">{words.other}</span>
-                    ) : room && room.total >= 2 ? (
+                    ) : roomJoined && room && room.total >= 2 ? (
                       <span className="text-xs tabular-nums text-ink/50">{room.counts[index]}</span>
                     ) : (
                       <Bars weight={line.weight} />
@@ -731,36 +735,6 @@ export function ReceiptApp() {
               <DuplexResult same={same} mine={myLabel} theirs={theirLabel} locale={locale} />
             ) : null}
           </div>
-          ) : null}
-          {room && mine !== null && deckDesire(desire) ? (
-            <div className="pt-3 text-center">
-              {room.total < 2 ? (
-                <p className="text-xs tracking-widest text-ink/45">{words.empty}</p>
-              ) : room.top === null ? (
-                <p className="text-sm leading-normal text-ink/70">{words.tie(room.total)}</p>
-              ) : (
-                <>
-                  <p className="text-xs tracking-widest text-ink/45">{words.room}</p>
-                  <p className="mt-1 font-display text-lg font-medium italic leading-tight text-balance">
-                    {lines[room.top] ? localizedCost(lines[room.top],locale).label : ""}
-                  </p>
-                  <p className="mt-1 text-xs tabular-nums text-ink/55">
-                    {words.of(room.counts[room.top],room.total)}
-                  </p>
-                </>
-              )}
-            </div>
-          ) : null}
-          {mine !== null && deckDesire(desire) && !roomJoined ? (
-            <div className="mt-5 border-t border-ink/15 pt-3">
-              <button type="button" onClick={() => void joinRoom()} disabled={roomSubmitting}
-                className="tap min-h-11 w-full border border-ink/35 px-3 text-xs font-medium tracking-wide text-ink disabled:opacity-50">
-                {roomSubmitting ? words.roomSubmitting : words.roomConsent}
-              </button>
-              <p className="mt-2 text-xs leading-normal text-ink/65">{words.roomNotice}</p>
-            </div>
-          ) : roomJoined ? (
-            <p role="status" className="mt-5 text-center text-xs text-ink/70">{words.roomJoined}</p>
           ) : null}
           <Rule seed={seed} />
           <p className="mt-4 text-center text-xs tracking-widest text-ink/40">{words.signoff}</p>
@@ -842,6 +816,33 @@ export function ReceiptApp() {
         ) : null}
       </div>
 
+      {mine!==null && deckDesire(desire) ? (
+        <details className="room-drawer mt-8 border-t border-paper/20 pt-4"
+          onToggle={(event)=>setRoomOpen(event.currentTarget.open)}>
+          <summary className="tap cursor-pointer text-xs tracking-widest text-paper/65">{words.room}</summary>
+          <div className="mt-4 space-y-3">
+            <p className="text-xs leading-relaxed text-paper/65">{words.roomNotice}</p>
+            {roomJoined && room ? (
+              room.total<2 ? (
+                <p role="status" className="text-xs text-paper/60">{words.empty}</p>
+              ) : room.top===null ? (
+                <p className="text-sm text-paper/70">{words.tie(room.total)}</p>
+              ) : (
+                <p className="text-sm text-paper/85">
+                  {lines[room.top] ? localizedCost(lines[room.top],locale).label : ""}
+                  <span className="ml-2 text-xs text-paper/60">{words.of(room.counts[room.top],room.total)}</span>
+                </p>
+              )
+            ) : null}
+            {!roomJoined ? (
+              <button type="button" onClick={()=>void joinRoom()} disabled={roomSubmitting}
+                className="tap min-h-12 w-full border border-paper/40 text-sm text-paper disabled:opacity-50">
+                {roomSubmitting?words.roomSubmitting:words.roomConsent}
+              </button>
+            ) : <p role="status" className="text-xs text-paper/65">{words.roomJoined}</p>}
+          </div>
+        </details>
+      ) : null}
       <div className="mt-8">
         <p className="text-xs tracking-widest text-paper/50">{words.more}</p>
         <div className="mt-3 flex flex-wrap gap-2">
@@ -898,15 +899,16 @@ export function ReceiptApp() {
         ) : null}
       </div>
 
-      {canAdvance ? (
+      {canAdvance || canShareResult ? (
         <aside className="mobile-next fixed inset-x-0 bottom-0 z-40 border-t border-paper/20 bg-carbon/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-md md:hidden" aria-label={words.nextStep}>
-          <p className="mx-auto mb-2 max-w-md text-[10px] leading-snug text-paper/70">{words.betaNoticeShort}</p>
+          <p className="mx-auto mb-2 max-w-md text-[10px] leading-snug text-paper/70">{canShareResult?words.invitation:words.betaNoticeShort}</p>
           <div className="mx-auto flex max-w-md items-center gap-3">
             <span className="max-w-24 shrink-0 text-[10px] leading-tight tracking-widest text-paper/70">{words.nextStep}</span>
-            <button type="button" disabled={busy}
+            <button type="button" disabled={busy||posterBusy}
               className="tap min-h-12 flex-1 bg-paper px-3 text-sm font-medium text-ink disabled:opacity-50"
-              onClick={() => void defy()}>
-              {busyAction === "seal" ? words.sealing : busyAction === "share" ? words.sharing : duelId ? words.send : words.seal}
+              onClick={() => canShareResult ? void downloadDuelPoster() : void defy()}>
+              {canShareResult ? (posterBusy?words.composing:words.poster)
+                : busyAction==="seal"?words.sealing:busyAction==="share"?words.sharing:duelId?words.send:words.seal}
             </button>
           </div>
         </aside>
