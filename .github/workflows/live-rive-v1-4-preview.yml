@@ -5,6 +5,7 @@ on:
       - feature/rive-paper-remembers-v1-4
     paths:
       - scripts/rive-paper-live-smoke.mjs
+      - package-lock.json
       - .github/workflows/live-rive-v1-4-preview.yml
   workflow_dispatch:
 permissions:
