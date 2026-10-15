@@ -1,0 +1,43 @@
+name: LE REÇU V1.4 — Live Rive & Neon Preview QA
+on:
+  push:
+    branches:
+      - feature/rive-paper-remembers-v1-4
+    paths:
+      - scripts/rive-paper-live-smoke.mjs
+      - .github/workflows/live-rive-v1-4-preview.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  live-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      LIVE_BETA_URL: https://le-recu-invite-beta-5qyalwstz-faadil1s-projects.vercel.app/
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm run rive:check
+      - run: npm run typecheck
+      - run: npm run test:product
+      - run: node --check scripts/rive-paper-live-smoke.mjs
+      - run: node --check scripts/live-beta-e2e.mjs
+      - run: npx playwright install --with-deps chromium
+      - name: Verify hosted Rive binary and live canvas with graceful reduced-motion fallback
+        run: node scripts/rive-paper-live-smoke.mjs
+      - name: Verify actual Neon FR to EN duplex, exports, outsider privacy and erasure
+        run: node scripts/live-beta-e2e.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: le-recu-v1-4-live-rive-neon
+          path: |
+            playwright-artifacts/
+            playwright-artifacts-rive/
+          if-no-files-found: ignore
+          retention-days: 7
