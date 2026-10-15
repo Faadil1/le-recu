@@ -2,7 +2,19 @@
   "evidence_class": "LOCAL",
   "base": "http://127.0.0.1:8080/",
   "database": "PGlite in-memory (no DATABASE_URL)",
-  "ran_at": "2026-10-15T18:40:06.159Z",
+  "ran_at": "2026-10-15T19:07:29.989Z",
+  "metrics": {
+    "fully_visible_cost_rows_at_idle": {
+      "390x844": {
+        "with_stage": 4,
+        "v1_3_baseline": 4
+      },
+      "320x640": {
+        "with_stage": 2,
+        "v1_3_baseline": 2
+      }
+    }
+  },
   "results": [
     {
       "name": "creator: receipt loads, paper stage idle with a Rive canvas",
@@ -30,7 +42,7 @@
       "detail": ""
     },
     {
-      "name": "guest: opens the invite, paper blank, creator's refusal not in the page",
+      "name": "guest: opens the invite; paper is blank (no ink, seal or second impression, no struck cost)",
       "ok": true,
       "detail": ""
     },
@@ -45,12 +57,22 @@
       "detail": ""
     },
     {
+      "name": "V1.3 regression: duplex imprint, FR/EN posters are real 1080x1350 PNGs",
+      "ok": true,
+      "detail": "fr:1080x1350 en:1080x1350"
+    },
+    {
       "name": "same refusal: a second duel where both refuse the same cost converges (registered impression)",
       "ok": true,
       "detail": ""
     },
     {
       "name": "third browser cannot reveal: outsider sees an unavailable paper",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "erase: participant-authorised deletion closes the paper for both browsers",
       "ok": true,
       "detail": ""
     },
@@ -88,6 +110,11 @@
       "name": "no horizontal overflow at 320 / 390 / 430 / 1280 in both locales",
       "ok": true,
       "detail": "320fr 320en 390fr 390en 430fr 430en 1280fr 1280en"
+    },
+    {
+      "name": "fold: fully visible cost rows at idle, stage shown vs hidden (V1.3 baseline)",
+      "ok": true,
+      "detail": "{\"390x844\":{\"with_stage\":4,\"v1_3_baseline\":4},\"320x640\":{\"with_stage\":2,\"v1_3_baseline\":2}}"
     },
     {
       "name": "self-hosted Rive runtime: no unpkg/jsdelivr/rive.app request",

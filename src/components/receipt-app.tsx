@@ -701,7 +701,6 @@ export function ReceiptApp() {
           {phase==="reply" ? (
             <p className="mt-3 border-l-2 border-stamp/55 pl-3 text-xs leading-relaxed text-ink/65">{words.betaGuest}</p>
           ) : null}
-          <RivePaperStage state={paperState} phase={paperPhase} proximity={proximity} locale={locale} refusedLabel={myLabel} />
           <ul className="lines mt-4 divide-y divide-ink/10"
             onPointerOver={(event) => setProximity((event.target as HTMLElement).closest(".line-btn:not(:disabled)") ? 1 : 0)}
             onPointerLeave={() => setProximity(0)}
@@ -742,6 +741,7 @@ export function ReceiptApp() {
               </li>
             ))}
           </ul>
+          <RivePaperStage state={paperState} phase={paperPhase} proximity={proximity} locale={locale} refusedLabel={myLabel} />
           {mine !== null && duelRole !== "responder" && (phase==="seal" || phase==="waiting") ? (
             <p className="mt-4 border-l-2 border-stamp/55 pl-3 text-xs leading-relaxed text-ink/65">
               {words.betaNotice}

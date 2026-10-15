@@ -14,14 +14,17 @@ Evidence classes used below: **VISUAL** (Rive CLI headless frame), **LOCAL** (re
 | Two explored directions rendered by Rive | PROVEN | VISUAL | `evidence/rive-v1-4/directions/direction-{fiber,press}-contact-sheet.png` |
 | Interactive states rendered by Rive (idle, proximity, ink, pending, sealed impact, sealed, waiting, reveal same/different, failed, unavailable) | PROVEN | VISUAL | `evidence/rive-v1-4/rive-cli-frames/_states-contact-sheet.png` + 14 frames |
 | State machine + data binding | PROVEN | LOCAL | 1 artboard `PaperStage` 360×240, state machine `PaperMachine` (1 layer, 10 animation states, 10 AnyState view-model transitions + entry), view model `PaperState` = numbers `phase`, `outcome`, `markKept`, `proximity`; 220 keyed properties; 16 data binds; **0 scripts** |
-| React integration with accessible HTML/SVG fallback | PROVEN | LOCAL | `src/components/rive-paper*.tsx`; 19 browser checks, below |
+| React integration with accessible HTML/SVG fallback | PROVEN | LOCAL | `src/components/rive-paper*.tsx`; 22 browser checks, below |
 | Seal only after confirmed `createDuel` | PROVEN | LOCAL | observed phase sequence `pending > sealed > waiting`; local choice = `ink` only, zero POSTs before Seal; exhaustive contract test over 6 480 input combinations |
 | No reveal without a second answer | PROVEN | LOCAL | contract test + browser: guest/outsider/missing/closed never reach `reveal`; outsider sees `unavailable` |
 | Same / different encoded from real outcome | PROVEN | LOCAL | creator and guest captions + frames for both outcomes (`08/08b/09/09b`) |
 | Reduced motion, no WebGL2, Rive file 404, keyboard, 320/390/430/1280 × FR/EN, no overflow | PROVEN | LOCAL | same run |
 | Failure + recovery | PROVEN | LOCAL | `createDuel` aborted → `failed` paper keeps the mark, no seal; network restored → retry reaches `waiting` |
 | Self-hosted Rive runtime | PROVEN | LOCAL | no request to unpkg/jsdelivr/rive.app (wasm bundled via `?url`) |
-| `tsc --noEmit`, `npm run test:product` (37), `npm test` (71), ESLint on new files, `vite build` | PROVEN | LOCAL | see below |
+| `tsc --noEmit`, `npm run test:product` (37), `npm test` (71), ESLint on new files; real `npm ci` + `vite build` in a clean worktree of the committed SHA | PROVEN | LOCAL | see below |
+| Production build serves the Rive stage (lazy chunk, bundled wasm ×2, `.riv`) | PROVEN | LOCAL | `scripts/rive-paper-build-smoke.mjs` against `vite preview`; **no database**, so duel flows are not run on the build |
+| V1.3 exports + erase still work with the stage in place | PROVEN | LOCAL | FR and EN posters downloaded: real PNG, 1080×1350; participant erase closes the invite for both browsers |
+| No loss of first-screen cost rows on mobile | PROVEN | LOCAL | 390×844: 4 rows fully visible with or without the stage; 320×640: 2 and 2 (stage sits below the list) |
 | Vercel Preview of this SHA | **BLOCKED** | — | requires pushing the branch and creating a deployment; not done without the owner's go-ahead |
 | `scripts/live-beta-e2e.mjs` against a deployed Preview + Neon staging | **BLOCKED** | — | needs `LIVE_BETA_URL` from that Preview |
 | Real iPhone / low-power / hardware GPU / real screen reader | **BLOCKED** | — | not available in this environment |
@@ -74,7 +77,7 @@ npm run test:product               37 pass / 0 fail   (adds src/lib/rive-paper-c
 npm test                           71 pass / 0 fail
 npx eslint (new files)             clean
 node node_modules/vite/bin/vite.js build   ok
-RIVE_E2E_URL=http://127.0.0.1:8080/ node scripts/rive-paper-e2e.mjs   19/19 PASS
+RIVE_E2E_URL=http://127.0.0.1:8080/ node scripts/rive-paper-e2e.mjs   22/22 PASS
 ```
 
 `npm run build` could not be used verbatim on this Windows machine: `scripts/with-app-env.mjs` calls `spawn("vite")`, which fails with `ENOENT` here (pre-existing, unrelated to Rive). The product-reality preflight passed and `vite build` was run directly. Vercel runs Linux, where the wrapper works.
@@ -83,37 +86,47 @@ RIVE_E2E_URL=http://127.0.0.1:8080/ node scripts/rive-paper-e2e.mjs   19/19 PASS
 
 ## Browser matrix (LOCAL, `scripts/rive-paper-e2e.mjs`, result file `evidence/rive-v1-4/rive-paper-e2e-result.json`)
 
-Two independent contexts (FR-CA creator, EN-US guest), one against the other, plus an outsider.
+Two independent contexts (FR-CA creator, EN-US guest) plus an outsider, a dev server **without `DATABASE_URL`** (checked at User, Machine and Process level and in the repo: no value, no `.env*` file), so the in-memory PGlite fallback served every duel. Neon was never contacted.
 
 1. idle paper with a live Rive canvas, canvas input-inert and aria-hidden
 2. hover reaches the scene as proximity only; product phase unchanged
-3. local refusal = ink; zero server POST; no seal in DOM
+3. local refusal = ink; zero POST requests; no seal in DOM (with a positive control: Seal does POST before the seal appears)
 4. Seal: `pending → sealed → waiting`, never a seal before pending
 5. waiting: empty slot, no second impression
-6. guest opens the invite: blank paper
+6. guest opens the invite: no ink, seal, second impression, duplex block or struck cost in the DOM
 7. guest replies: reveal (different)
 8. creator checks: reveal, captions agree
-9. same-refusal duel: converged registered impression for both
-10. outsider: `unavailable`, no second impression
-11. unknown invite id: `unavailable` + recovery button
-12. injected `createDuel` failure: `failed`, mark kept, no seal; recovery works
-13. `prefers-reduced-motion`: no canvas mounted, static paper, flow works
-14. WebGL2 unavailable: DOM paper only, flow works
-15. `.riv` returns 404: fallback, flow works
-16. keyboard only (Tab / Enter) through refuse and seal
-17. no horizontal overflow at 320 / 390 / 430 / 1280 × FR/EN
-18. no third-party Rive runtime request
-19. no console or page errors
+9. V1.3 regression: both duplex blocks, canonical first/second across locales, FR and EN posters = real PNG 1080×1350
+10. same-refusal duel: converged registered impression for both
+11. outsider: `unavailable`, no second impression
+12. participant erase: confirmation, success text, then the invite is unavailable for the other browser
+13. unknown invite id: `unavailable` + recovery button
+14. injected `createDuel` failure: `failed`, mark kept, no seal; recovery works
+15. `prefers-reduced-motion`: no canvas mounted, static paper, flow works
+16. WebGL2 unavailable: DOM paper only, flow works
+17. `.riv` returns 404: fallback, flow works
+18. keyboard only (Tab / Enter) through refuse and seal
+19. no horizontal overflow at 320 / 390 / 430 / 1280 × FR/EN
+20. fold metric (above)
+21. no third-party Rive runtime request (the only other origin seen is the pre-existing `grok.com` extension script)
+22. no console or page errors
 
 Frames: `evidence/rive-v1-4/browser-frames/*.png` (real app, real Rive canvas where `data-stage-live=true`).
+
+## Production build check (LOCAL, no database)
+
+`git worktree` of the committed SHA → real `npm ci` → `tsc` (0) → `test:product` (37) → `rive:check` (sha matches) → `vite build`: static output contains `/rive/le-recu-paper.riv`, `assets/rive-*.wasm`, `assets/rive_fallback-*.wasm` and the lazy `rive-paper-canvas-*.js` chunk. `vite preview` served it; `scripts/rive-paper-build-smoke.mjs` (`evidence/rive-v1-4/rive-paper-build-smoke-result.json`): canvas goes live from the bundled assets, reduced motion mounts none, and a Seal against a server that has no persistent database fails closed — the built app shows the **failed** paper and the error text, never a seal.
+
+Two honest findings from that run: (1) a built server cannot run duels without a real `DATABASE_URL` (by design, it refuses phantom success), and PGlite's `pglite.data` is not copied into the Vercel function output, so a complete duel on a build needs the Neon staging Preview; (2) `vite preview` serves `.wasm` without `application/wasm`, so the runtime logs a streaming-compile warning and falls back to ArrayBuffer instantiation (works, recorded in the result file). Vercel's static host serves the correct type, but only the Preview can confirm it.
 
 ## Known limits and honest caveats
 
 - PGlite is not Neon. Latency, cold start and the real 72 h expiry were not exercised, so the `pending` texture was only seen briefly.
 - Software GL (SwiftShader) was used; frame rate and thermal behaviour on a real low-power iPhone are unknown.
-- Rive pauses off-screen canvases. The stage therefore scrolls itself into view for `sealed`, `failed` and `reveal` (smooth, instant under reduced motion); this was added after a captured stale frame showed the creator's reveal animating unseen.
+- Rive pauses off-screen canvases. On a **transition** into `ink`, `sealed`, `failed` or `reveal` the stage scrolls itself into view (smooth, instant under reduced motion; never on first render) so the moment is not animated unseen. This was added after a captured stale frame showed the creator's reveal animating off-screen.
+- The stage sits **below** the cost list, so the V1.3 first-screen rows are unchanged on mobile. It is collapsed to 96 px at idle and 176 px once a mark exists.
 - No automated accessibility audit (axe) and no real screen reader pass. Verified: semantic buttons untouched, canvas hidden from AT, a polite live region per phase, focus order unchanged, keyboard path, reduced motion.
-- The stage adds 96 px (idle) / 176 px (active) above the cost list on mobile; the list still scrolls into reach but the first screen shows fewer rows than V1.3. Worth an owner decision.
+- Proximity is mouse/keyboard focus feedback; on touch it is effectively instantaneous and carries no meaning.
 - The Rive CLI is pinned at 1.5.1 (1.6.0 exists); not upgraded mid-task so provenance stays reproducible.
 - Cadet account use: signed-in session confirmed, **no file pushed, nothing overwritten**. A Rive-editor copy can be created later with `rive push` on explicit approval.
 

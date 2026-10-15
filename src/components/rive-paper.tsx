@@ -109,10 +109,14 @@ export function RivePaperStage({ state, phase, proximity, locale, refusedLabel }
   const live = mode === "rive" && canvas === "ready"
   const sectionRef = useRef<HTMLElement | null>(null)
 
-  // The moments that matter (a confirmed seal, a failure, the second impression) must be seen:
-  // Rive pauses off-screen canvases, so bring the paper into view instead of animating unseen.
+  // The moments that matter (the ink strike, a confirmed seal, a failure, the second impression) must be
+  // seen: Rive pauses off-screen canvases, so bring the paper into view on a *transition* instead of animating
+  // unseen. Never on first render, so reopening a page does not jump the scroll position.
+  const previousPhase = useRef<RivePhaseName | null>(null)
   useEffect(() => {
-    if (!mounted || !["sealed", "failed", "reveal"].includes(phase)) return
+    const before = previousPhase.current
+    previousPhase.current = phase
+    if (!mounted || before === null || before === phase || !["ink", "sealed", "failed", "reveal"].includes(phase)) return
     const el = sectionRef.current
     if (!el) return
     const rect = el.getBoundingClientRect()
