@@ -4,7 +4,7 @@
 // database is the in-memory PGlite fallback (no DATABASE_URL). It never touches Neon.
 // Evidence class: LOCAL (real server functions + real SQL on PGlite), not LIVE/STAGING.
 import assert from "node:assert/strict"
-import { mkdirSync, writeFileSync } from "node:fs"
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 import { chromium } from "playwright"
 
@@ -15,6 +15,7 @@ if (!BASE || !/^http:\/\/(127\.0\.0\.1|localhost):\d+\/$/.test(BASE)) {
 const OUT = process.argv[2] ?? "evidence/rive-v1-4/browser-frames"
 mkdirSync(OUT, { recursive: true })
 const log = []
+const metrics = {}
 const record = (name, ok, detail = "") => { log.push({ name, ok, detail }); console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? "  " + detail : ""}`) }
 const step = async (name, fn) => { try { const d = await fn(); record(name, true, d ?? ""); } catch (e) { record(name, false, String(e.message).split("\n")[0]); throw e } }
 
@@ -72,13 +73,14 @@ try {
   })
 
   await step("local refusal is ink, not a seal; nothing sent to the server yet", async () => {
-    let creates = 0
-    a.on("request", (r) => { if (r.method() === "POST" && /createDuel|duel/i.test(r.url())) creates++ })
+    let posts = 0
+    a.on("request", (r) => { if (r.method() === "POST") posts++ })
     await a.locator(".line-btn").nth(1).click()
     await waitPhase(a, "ink")
     await a.waitForTimeout(1300)
     await stageShot(a, "03-ink")
-    assert.equal(creates, 0)
+    assert.equal(posts, 0, "choosing a cost must not hit the server")
+    globalThis.__postsAfterInk = () => posts
     assert.equal(await a.locator(".pf-seal").count(), 0)
   })
 
@@ -91,6 +93,7 @@ try {
     })
     await a.locator("[data-actions]").getByRole("button", { name: /Sceller mon choix/ }).click()
     await waitPhase(a, "sealed", 30000)
+    assert.ok(globalThis.__postsAfterInk() > 0, "positive control: Seal must produce a server POST before the seal is shown")
     await a.waitForTimeout(450)
     await stageShot(a, "05-sealed-impact")
     await waitPhase(a, "waiting", 10000)
@@ -115,13 +118,14 @@ try {
   })
 
   // - guest (EN, mobile) -
-  await step("guest: opens the invite, paper blank, creator's refusal not in the page", async () => {
+  await step("guest: opens the invite; paper is blank (no ink, seal or second impression, no struck cost)", async () => {
     await b.goto(invite, { waitUntil: "domcontentloaded", timeout: 60000 })
     await b.locator(".line-btn").first().waitFor({ state: "visible", timeout: 60000 })
     await waitLive(b)
     assert.equal(await phaseOf(b), "idle")
-    const html = await b.content()
-    assert.ok(!/pf-second|pf-ink/.test(html.replace(/<style[\s\S]*?<\/style>/g, "")) || (await b.locator(".pf-ink").count()) === 0)
+    for (const sel of [".pf-ink", ".pf-seal", ".pf-second", ".duplex-imprint", "[data-receipt] .line-through"]) {
+      assert.equal(await b.locator(sel).count(), 0, `guest page must not contain ${sel} before replying`)
+    }
     await stageShot(b, "07-guest-blank")
   })
 
@@ -143,6 +147,30 @@ try {
     assert.ok(ca.length > 0 && cb.length > 0)
     await shot(a, "10-creator-full-reveal")
     await shot(b, "11-guest-full-reveal")
+  })
+
+  await step("V1.3 regression: duplex imprint, FR/EN posters are real 1080x1350 PNGs", async () => {
+    assert.match(await a.locator(".duplex-imprint").innerText(), /DEUX SIGNATURES/)
+    assert.match(await b.locator(".duplex-imprint").innerText(), /TWO SIGNATURES/)
+    const ownerFirst = (await a.locator(".duplex-first .duplex-cost").innerText()).trim()
+    assert.notEqual((await b.locator(".duplex-second .duplex-cost").innerText()).trim(), ownerFirst, "locales render independently")
+    await b.getByRole("button", { name: "FR", exact: true }).click()
+    assert.equal((await b.locator(".duplex-second .duplex-cost").innerText()).trim(), ownerFirst, "same canonical first/second in both locales")
+    await b.getByRole("button", { name: "EN", exact: true }).click()
+    const sizes = []
+    for (const [page, label, name] of [[a, "fr", /Partager l'image du duo/], [b, "en", /Share the duo image/]]) {
+      const waitDownload = page.waitForEvent("download", { timeout: 25000 })
+      await page.locator("[data-actions]").getByRole("button", { name }).click()
+      const file = await waitDownload
+      const target = join(OUT, `poster-${label}.png`)
+      await file.saveAs(target)
+      const png = readFileSync(target)
+      assert.equal(png.subarray(1, 4).toString(), "PNG")
+      assert.equal(png.readUInt32BE(16), 1080)
+      assert.equal(png.readUInt32BE(20), 1350)
+      sizes.push(`${label}:${png.readUInt32BE(16)}x${png.readUInt32BE(20)}`)
+    }
+    return sizes.join(" ")
   })
 
   await step("same refusal: a second duel where both refuse the same cost converges (registered impression)", async () => {
@@ -180,6 +208,17 @@ try {
     assert.equal(await c.locator(".pf-second").count(), 0)
     await stageShot(c, "12-outsider-unavailable")
     await ctx.close()
+  })
+
+  await step("erase: participant-authorised deletion closes the paper for both browsers", async () => {
+    a.once("dialog", (dialog) => { void dialog.accept() })
+    await a.locator("[data-actions]").getByRole("button", { name: /Effacer ce d[ée]fi/ }).click()
+    await a.getByText("Défi supprimé de la base.", { exact: false }).waitFor({ state: "visible", timeout: 25000 })
+    const fresh = await guestCtx.newPage(); watch(fresh, "guest-after-erase")
+    await fresh.goto(invite, { waitUntil: "domcontentloaded", timeout: 60000 })
+    await fresh.locator("[data-receipt]").waitFor({ state: "visible", timeout: 60000 })
+    await waitPhase(fresh, "unavailable", 20000)
+    assert.equal(await fresh.locator(".duplex-imprint").count(), 0)
   })
 
   await step("negative: missing invite id closes the paper and offers recovery", async () => {
@@ -305,11 +344,31 @@ try {
   })
 
   const riveForeign = [...foreignRequests].filter((o) => /unpkg|jsdelivr|rive.app|cdnjs/i.test(o))
+  await step("fold: fully visible cost rows at idle, stage shown vs hidden (V1.3 baseline)", async () => {
+    const rows = {}
+    for (const [w, h] of [[390, 844], [320, 640]]) {
+      const ctx = await browser.newContext({ locale: "en-US", viewport: { width: w, height: h } })
+      const c = await ctx.newPage()
+      await c.goto(BASE, { waitUntil: "domcontentloaded", timeout: 60000 })
+      await c.locator(".line-btn").first().waitFor({ state: "visible", timeout: 60000 })
+      await c.waitForTimeout(600)
+      const count = () => c.evaluate(() => [...document.querySelectorAll(".line-btn")].filter((el) => { const r = el.getBoundingClientRect(); return r.top >= 0 && r.bottom <= window.innerHeight }).length)
+      const withStage = await count()
+      await c.addStyleTag({ content: ".paper-stage{display:none!important}" })
+      await c.waitForTimeout(300)
+      const without = await count()
+      rows[`${w}x${h}`] = { with_stage: withStage, v1_3_baseline: without }
+      await ctx.close()
+    }
+    metrics.fully_visible_cost_rows_at_idle = rows
+    return JSON.stringify(rows)
+  })
+
   record("self-hosted Rive runtime: no unpkg/jsdelivr/rive.app request", riveForeign.length === 0, riveForeign.join(", ") || `other pre-existing origins: ${[...foreignRequests].join(", ") || "none"}`)
   record("no console/page errors across the run", consoleErrors.length === 0, consoleErrors.slice(0, 3).join(" | "))
 } finally {
   writeFileSync(join(OUT, "..", "rive-paper-e2e-result.json"), JSON.stringify({
-    evidence_class: "LOCAL", base: BASE, database: "PGlite in-memory (no DATABASE_URL)", ran_at: new Date().toISOString(), results: log,
+    evidence_class: "LOCAL", base: BASE, database: "PGlite in-memory (no DATABASE_URL)", ran_at: new Date().toISOString(), metrics, results: log,
   }, null, 2))
   await browser.close()
 }

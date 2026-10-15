@@ -26,7 +26,7 @@ export default function RivePaperCanvas({ values, proximity, onStatus }: Props) 
   const { rive, RiveComponent } = useRive({
     src: RIVE_ASSET_URL,
     artboard: RIVE_ARTBOARD,
-    stateMachines: RIVE_STATE_MACHINE,
+    stateMachine: RIVE_STATE_MACHINE,
     autoplay: true,
     layout: new Layout({ fit: Fit.Cover, alignment: Alignment.Center }),
     // The canvas is feedback only: it never owns pointer, touch or keyboard input.
