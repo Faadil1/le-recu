@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start"
 import { z } from "zod"
-import { deckDesire, tallyRoom, type RoomTally } from "@/lib/receipt"
+import { dailySeedFor, deckDesire, tallyRoom, type RoomTally } from "@/lib/receipt"
+import { consumeBetaBudget } from "@/lib/beta-limits"
 
 const empty: RoomTally = { total: 0, counts: [0, 0, 0, 0, 0], top: null }
 
@@ -9,9 +10,16 @@ function utcDay(now = Date.now()): number {
   return Math.floor(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()) / 86_400_000)
 }
 
+async function roomSql() {
+  const { dbSource, getSql } = await import("@/lib/db")
+  if (dbSource === "pglite" && process.env.NODE_ENV === "production") {
+    throw new Error("La salle nécessite une base partagée persistante.")
+  }
+  return getSql()
+}
+
 async function countsFor(desire: string): Promise<RoomTally> {
-  const { getSql } = await import("@/lib/db")
-  const sql = await getSql()
+  const sql = await roomSql()
   const day = utcDay()
   const rows = await sql<{ line: number; n: number }>`
     select line, count(*) as n
@@ -36,14 +44,29 @@ export const castStrike = createServerFn({ method: "POST" })
       desire: z.string().max(72),
       line: z.number().int().min(0).max(4),
       token: z.string().regex(/^[a-f0-9]{32}$/),
+      seed: z.number().int().min(0).max(0xffffffff),
+      issuedAt: z.number().int().min(1_577_836_800_000).max(4_102_444_800_000),
     }),
   )
   .handler(async ({ data }): Promise<RoomTally> => {
     const desire = deckDesire(data.desire)
     if (!desire) return empty
-    const { getSql } = await import("@/lib/db")
-    const sql = await getSql()
+    // Prevent yesterday's challenge or an alternative random catalogue
+    // being counted under today's visible labels.
     const day = utcDay()
+    if (utcDay(data.issuedAt) !== day || dailySeedFor(desire, data.issuedAt) !== data.seed) {
+      return countsFor(desire)
+    }
+    const sql = await roomSql()
+    // Consent must be expressed by the caller before invoking castStrike.
+    // A duplicate committed actor/day row should not consume another quota.
+    const exists=await sql<{already:number}>`
+      select 1 as already from strikes
+      where day=${day} and desire=${desire} and token=${data.token}
+      limit 1
+    `
+    if (exists.length > 0) return countsFor(desire)
+    await consumeBetaBudget(sql, "room-strike", data.token, Date.now())
     await sql`
       insert into strikes (day, desire, line, token)
       values (${day}, ${desire}, ${data.line}, ${data.token})

@@ -40,9 +40,14 @@
 }
 
 .paper {
-  background: var(--color-paper);
+  background-color: var(--color-paper);
+  background-image:
+    radial-gradient(circle at 15% 20%, rgb(57 36 21 / 0.08) 0.55px, transparent 0.9px),
+    radial-gradient(circle at 80% 70%, rgb(57 36 21 / 0.06) 0.5px, transparent 1px),
+    linear-gradient(98deg, rgb(255 255 255 / 0.18), transparent 35%, rgb(54 38 24 / 0.035));
+  background-size: 27px 29px, 19px 23px, cover;
   color: var(--color-ink);
-  box-shadow: 0 22px 50px color-mix(in oklab, black 55%, transparent);
+  box-shadow: 0 15px 0 -10px rgb(0 0 0 / 0.42), 0 28px 75px rgb(0 0 0 / 0.66);
 }
 
 .paper :focus-visible {
@@ -142,4 +147,297 @@
     opacity: 1;
     transform: rotate(-6deg);
   }
+}
+
+/* The comparison is physically a second ink impression, not an analytics card. */
+.duplex-imprint {
+  position: relative;
+  padding: 22px 12px 28px;
+  overflow: hidden;
+  border-top: 1px dashed color-mix(in oklab, var(--color-ink) 40%, transparent);
+  border-bottom: 1px dashed color-mix(in oklab, var(--color-ink) 40%, transparent);
+  background: repeating-linear-gradient(
+    0deg, transparent 0 27px,
+    color-mix(in oklab, var(--color-ink) 3%, transparent) 28px 29px
+  );
+  animation: paperIn 550ms ease-out both;
+}
+.duplex-eyebrow, .duplex-index {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  color: color-mix(in oklab, var(--color-ink) 60%, transparent);
+}
+.duplex-eyebrow { text-align: center; margin-bottom: 20px; }
+.duplex-plates { position: relative; display: grid; gap: 8px; }
+.duplex-plate {
+  display: grid;
+  grid-template-columns: minmax(76px, 0.38fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+  text-align: left;
+  padding: 13px 5px;
+  border-bottom: 1px solid color-mix(in oklab, var(--color-ink) 15%, transparent);
+}
+.duplex-second {
+  position: relative;
+  margin-left: 14px;
+  border-left: 2px solid var(--color-stamp);
+  padding-left: 15px;
+  animation: lineIn 650ms 180ms both;
+}
+.duplex-cost {
+  font-family: var(--font-display);
+  font-size: clamp(18px, 5vw, 26px);
+  font-style: italic;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.duplex-refused {
+  text-decoration-line: line-through;
+  text-decoration-color: var(--color-stamp);
+  text-decoration-thickness: 2px;
+  text-decoration-skip-ink: none;
+}
+.duplex-verdict {
+  width: max-content;
+  max-width: 100%;
+  margin: 24px auto 6px;
+  padding: 9px 15px;
+  transform: rotate(-4deg);
+  border: 2px solid var(--color-stamp);
+  border-radius: 50%;
+  color: var(--color-stamp);
+  font-family: var(--font-mono);
+  font-size: clamp(10px, 3vw, 12px);
+  font-weight: bold;
+  line-height: 1.25;
+  letter-spacing: 0.03em;
+  text-align: center;
+}
+.duplex-note {
+  max-width: 22rem;
+  margin-inline: auto;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 18px;
+  line-height: 1.35;
+  color: var(--color-ink);
+}
+@media (prefers-reduced-motion: reduce) {
+  .duplex-imprint, .duplex-second {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/*
+ * PAPER UNDER PRESSURE — a complete, causal visual grammar.
+ * All decorative states are derived from persisted decisions, not seeded drama.
+ * The canvas export uses the same red ink, typography and paired strike logic.
+ */
+.receipt-world { position: relative; isolation: isolate; }
+.receipt-world::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.6;
+  background:
+    radial-gradient(ellipse at 50% 28%, rgba(123,48,29,.1), transparent 54%),
+    repeating-linear-gradient(90deg, transparent 0, transparent 35px,
+      rgba(240,229,212,.013) 36px);
+}
+.receipt-sheet {
+  position: relative;
+  border-top: 2px solid rgb(255 255 255 / 0.35);
+}
+.receipt-sheet::before {
+  content: "";
+  position: absolute;
+  top: 10px;
+  bottom: 12px;
+  left: -2px;
+  width: 2px;
+  opacity: .22;
+  pointer-events: none;
+  background: repeating-linear-gradient(180deg,var(--color-ink) 0 2px,transparent 2px 18px);
+}
+.receipt-sheet[data-paper-state="waiting"]::before,
+.receipt-sheet[data-paper-state="reveal"]::before {
+  background: var(--color-stamp);
+  opacity: .72;
+}
+.journey-rail {
+  display: grid;
+  grid-template-columns: repeat(4,minmax(0,1fr));
+  gap: 6px;
+  width: 100%;
+}
+.journey-step {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  font-size: 9px;
+  font-family: var(--font-mono);
+  letter-spacing: .06em;
+  line-height: 1.28;
+  color: rgb(243 236 223 / .39);
+}
+.journey-tick {
+  display: block;
+  height: 2px;
+  background: rgb(243 236 223 / .14);
+  transition: background-color 220ms ease;
+}
+.journey-past { color: rgb(243 236 223 / .7); }
+.journey-past .journey-tick { background: rgb(243 236 223 / .63); }
+.journey-active { color: var(--color-paper); }
+.journey-active .journey-tick {
+  height: 3px;
+  background: var(--color-stamp);
+  box-shadow: 0 0 16px rgb(163 32 24 / .3);
+}
+.reading-cue {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.5;
+  letter-spacing: .02em;
+  color: var(--color-stamp);
+  border-left: 2px solid var(--color-stamp);
+  padding: 1px 0 1px 10px;
+}
+.receipt-sheet h1 {
+  letter-spacing: -.023em;
+}
+.receipt-sheet .line-btn {
+  position: relative;
+  padding-inline: 5px;
+  transition: background-color 180ms ease, padding-left 180ms ease;
+}
+.receipt-sheet .line-btn:not(:disabled):active { padding-left: 11px; }
+.receipt-sheet .line-btn:focus-visible {
+  background: rgb(163 32 24 / .055);
+  outline: 2px solid var(--color-stamp);
+  outline-offset: 1px;
+}
+.receipt-sheet .line-btn .decoration-stamp {
+  text-decoration-color: var(--color-stamp);
+  text-decoration-thickness: 3px;
+  text-decoration-skip-ink: none;
+}
+.action-eyebrow {
+  font-size: 10px;
+  letter-spacing: .2em;
+  color: rgb(243 236 223 / .44);
+  border-top: 1px solid rgb(243 236 223 / .2);
+  padding-top: 14px;
+}
+.action-block button { letter-spacing: .012em; }
+.action-block button:focus-visible { outline-offset: 5px; }
+.action-block > button:first-of-type {
+  position: relative;
+  font-weight: 600;
+  transition: background-color 180ms ease, transform 180ms ease;
+}
+.action-block > button:first-of-type:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+.mobile-next { box-shadow: 0 -16px 45px rgb(0 0 0 / .7); }
+.duplex-imprint {
+  background: none;
+  padding: 24px 4px 25px;
+  border-top-style: solid;
+  border-bottom-style: solid;
+}
+.duplex-eyebrow { color: var(--color-stamp); font-weight: 500; }
+.duplex-plates { gap: 16px; }
+.duplex-plate {
+  grid-template-columns: 1fr;
+  gap: 9px;
+  padding: 10px 4px 17px;
+  border-bottom: 0;
+}
+.duplex-second {
+  margin-left: 0;
+  padding-left: 4px;
+  border-left: 0;
+}
+.duplex-cost {
+  font-size: clamp(24px,6vw,30px);
+  font-weight: 500;
+  line-height: 1.25;
+}
+.duplex-refused {
+  text-decoration-thickness: 4px;
+  text-decoration-skip-ink: none;
+}
+.duplex-verdict {
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  width: 151px;
+  min-height: 142px;
+  max-width: 100%;
+  margin: 16px auto 10px;
+  padding: 22px 17px;
+  border-width: 4px;
+  border-radius: 50%;
+  transform: rotate(-6deg);
+  font-size: 13px;
+  line-height: 1.5;
+  font-weight: 700;
+  text-wrap: balance;
+  letter-spacing: -.012em;
+}
+.duplex-verdict::after {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border: 1px solid var(--color-stamp);
+  border-radius: 50%;
+  opacity: .75;
+  pointer-events: none;
+}
+.duplex-note { font-size: 17px; line-height: 1.4; }
+.editorial-side { display: none; }
+
+@media(min-width: 1024px) {
+  .editorial-side {
+    display: flex;
+    position: fixed;
+    top: 27vh;
+    right: calc(50% + 260px);
+    width: min(300px, calc((100vw - 540px) / 2 - 35px));
+    flex-direction: column;
+    gap: 18px;
+    align-items: flex-end;
+    text-align: right;
+    pointer-events: none;
+    color: var(--color-paper);
+  }
+  .editorial-serial { font-size: 12px; letter-spacing: .22em; opacity: .45; }
+  .editorial-side strong,.editorial-side em {
+    font-family: var(--font-display);
+    font-size: clamp(28px,3.2vw,52px);
+    line-height: 1.05;
+    font-weight: 500;
+  }
+  .editorial-side em { color: #c74e40; }
+  .editorial-rule { width: 75px; border-top: 3px solid var(--color-stamp); }
+  .receipt-world { max-width: 490px; }
+  .receipt-world .paper { padding-inline: 29px; }
+}
+@media(max-width: 350px) {
+  .journey-step { font-size: 8px; letter-spacing: 0; }
+  .receipt-sheet h1 { font-size: 25px; }
+  .duplex-cost { font-size: 23px; }
+}
+@media(prefers-reduced-motion: reduce) {
+  .journey-tick,.receipt-sheet .line-btn,
+  .action-block > button:first-of-type { transition: none; }
+  .action-block > button:first-of-type:hover:not(:disabled) { transform: none; }
 }
