@@ -19,10 +19,12 @@
     "test": "node --test 'scripts/**/*.test.mjs' && node --experimental-strip-types --test src/lib/app-data/app-data.test.ts src/lib/app-data/readiness-schedule.test.ts src/lib/auth/gate-identity.test.ts src/lib/auth/sign-in-gate.test.ts src/lib/duel-contract.test.ts src/lib/locale.test.ts",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "test:product": "node --test scripts/check-product-reality.test.mjs && node --experimental-strip-types --test src/lib/duel-contract.test.ts src/lib/locale.test.ts src/lib/experience-state.test.ts src/lib/beta-limits.test.ts",
+    "test:product": "node --test scripts/check-product-reality.test.mjs && node --experimental-strip-types --test src/lib/duel-contract.test.ts src/lib/locale.test.ts src/lib/experience-state.test.ts src/lib/beta-limits.test.ts src/lib/rive-paper-contract.test.ts",
     "db:verify": "node scripts/db-verify.mjs",
     "product:check": "node scripts/check-product-reality.mjs --review",
-    "product:release-check": "node scripts/check-product-reality.mjs --release"
+    "product:release-check": "node scripts/check-product-reality.mjs --release",
+    "rive:build": "node scripts/build-rive.mjs",
+    "rive:check": "node scripts/build-rive.mjs --check"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.4",
@@ -50,6 +52,8 @@
     "@radix-ui/react-toggle": "^1.1.10",
     "@radix-ui/react-toggle-group": "^1.1.11",
     "@radix-ui/react-tooltip": "^1.2.8",
+    "@rive-app/react-webgl2": "^4.36.0",
+    "@rive-app/webgl2": "^2.44.0",
     "@tailwindcss/vite": "^4.3.0",
     "@tanstack/react-query": "^5.101.0",
     "@tanstack/react-router": "^1.170.0",

@@ -19,6 +19,8 @@ import { canonicalSelections, type DuelView } from "@/lib/duel-contract"
 import { canAdvanceChoice, experiencePhase } from "@/lib/experience-state"
 import { makeDuplexPoster } from "@/lib/duel-image"
 import { DuplexResult } from "@/components/duplex-result"
+import { RivePaperStage } from "@/components/rive-paper"
+import { SEALED_DWELL_MS, isFreshSeal, rivePaperState, visualPhase, type RivePhaseName } from "@/lib/rive-paper-contract"
 import { CATEGORY, challengeCopy, duelCopy, localizedCost, localizedDesire, localizedServerError, parseLocale, t, type Locale } from "@/lib/locale"
 
 const HISTORY_KEY = "lerecu.v1"
@@ -206,9 +208,25 @@ export function ReceiptApp() {
   const [eraseBusy, setEraseBusy] = useState(false)
   const [eraseNotice, setEraseNotice] = useState("")
   const [duelError, setDuelError] = useState("")
+  const [inviteUnreadable, setInviteUnreadable] = useState(false)
+  const [proximity, setProximity] = useState(0)
+  const [seenPaperPhase, setSeenPaperPhase] = useState<RivePhaseName | null>(null)
+  const [sealedHold, setSealedHold] = useState(false)
 
   const lines = useMemo(() => (desire ? generateLines(desire, seed) : []), [desire, seed])
   const phase = experiencePhase({id:duelId,role:duelRole,status:duelStatus,mine,theirs})
+  // The paper (Rive or its static twin) is a projection of state the server has already answered.
+  const paperState = rivePaperState({
+    experience:{id:duelId,role:duelRole,status:duelStatus,mine,theirs},
+    action:busyAction, hasError:duelError!=="", loadFailed:inviteUnreadable,
+  })
+  if (seenPaperPhase !== paperState.phase) {
+    // derived during render so a freshly confirmed seal never flashes as "waiting" first
+    setSeenPaperPhase(paperState.phase)
+    if (isFreshSeal(seenPaperPhase, paperState.phase)) setSealedHold(true)
+    else if (paperState.phase !== "waiting") setSealedHold(false)
+  }
+  const paperPhase = visualPhase(paperState.phase, sealedHold)
   const reveal = phase === "reveal"
   const shown = useMemo(() => present(lines, mine, theirs, reveal), [lines, mine, theirs, reveal])
   const words=t(locale)
@@ -217,6 +235,12 @@ export function ReceiptApp() {
   const theirLabel=theirs!==null&&reveal&&lines[theirs]?localizedCost(lines[theirs],locale).label:""
   const same = reveal && mine !== null && mine === theirs
   const ordered = canonicalSelections(duelRole, mine, theirs)
+
+  useEffect(() => {
+    if (!sealedHold) return
+    const id = window.setTimeout(() => setSealedHold(false), SEALED_DWELL_MS)
+    return () => window.clearTimeout(id)
+  }, [sealedHold])
 
   useEffect(() => {
     let cancelled = false
@@ -234,6 +258,7 @@ export function ReceiptApp() {
             if (cancelled) return
             if (view.status === "missing") {
               setDuelError(t(preferredLocale()).missing)
+              setInviteUnreadable(true)
             } else {
               setDuelId(id)
               setDuelRole(view.role)
@@ -246,7 +271,10 @@ export function ReceiptApp() {
               setSpectacle(view.status === "complete")
             }
           } catch (error) {
-            if (!cancelled) setDuelError(error instanceof Error ? localizedServerError(error.message,preferredLocale()) : t(preferredLocale()).unavailable)
+            if (!cancelled) {
+              setDuelError(error instanceof Error ? localizedServerError(error.message,preferredLocale()) : t(preferredLocale()).unavailable)
+              setInviteUnreadable(true)
+            }
           }
         }
       } else {
@@ -324,6 +352,7 @@ export function ReceiptApp() {
     setDuelRole("guest")
     setDuelStatus("none")
     setDuelError("")
+    setInviteUnreadable(false)
     setResponseChecked(false)
     setDuelUrl(null)
   }
@@ -645,7 +674,9 @@ export function ReceiptApp() {
         </button>
       ) : null}
 
-      <div key={`${desire}-${seed}-${theirs ?? "x"}`} data-receipt className="paper-in mt-3">
+      {/* Keyed by the receipt only: the Rive stage must survive the reveal so the second impression
+          prints onto the very same paper instead of a freshly mounted canvas. */}
+      <div key={`${desire}-${seed}`} data-receipt className="paper-in mt-3">
         <article className="paper receipt-sheet px-4 pt-4 pb-4" data-paper-state={phase}>
           <header className="flex items-baseline justify-between gap-3">
             <p className="font-display text-xl font-semibold tracking-wide">{words.title}</p>
@@ -670,7 +701,12 @@ export function ReceiptApp() {
           {phase==="reply" ? (
             <p className="mt-3 border-l-2 border-stamp/55 pl-3 text-xs leading-relaxed text-ink/65">{words.betaGuest}</p>
           ) : null}
-          <ul className="lines mt-4 divide-y divide-ink/10">
+          <RivePaperStage state={paperState} phase={paperPhase} proximity={proximity} locale={locale} refusedLabel={myLabel} />
+          <ul className="lines mt-4 divide-y divide-ink/10"
+            onPointerOver={(event) => setProximity((event.target as HTMLElement).closest(".line-btn:not(:disabled)") ? 1 : 0)}
+            onPointerLeave={() => setProximity(0)}
+            onFocusCapture={() => setProximity(0.8)}
+            onBlurCapture={() => setProximity(0)}>
             {shown.map((line, index) => (
               <li key={line.id}>
                 <button
@@ -720,12 +756,8 @@ export function ReceiptApp() {
             ) : null}
             {mine !== null && !reveal ? (
               <div className="text-center">
-                <div className="stamp-in mx-auto flex size-24 items-center justify-center rounded-full border-2 border-stamp">
-                  <div className="flex size-20 items-center justify-center rounded-full border border-stamp">
-                    <span className="font-display text-3xl font-semibold tracking-widest text-stamp">{words.stamp}</span>
-                  </div>
-                </div>
-                <p className="mt-3 text-sm leading-normal text-ink/70">
+                {/* No stamp here: the seal is drawn by the paper stage only after the server confirms createDuel. */}
+                <p className="text-sm leading-normal text-ink/70">
                   {words.refused}
                   <span className="mt-1 block font-display text-xl font-medium italic text-ink">{myLabel}</span>
                 </p>

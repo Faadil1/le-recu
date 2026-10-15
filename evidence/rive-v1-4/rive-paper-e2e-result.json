@@ -1,0 +1,103 @@
+{
+  "evidence_class": "LOCAL",
+  "base": "http://127.0.0.1:8080/",
+  "database": "PGlite in-memory (no DATABASE_URL)",
+  "ran_at": "2026-10-15T18:40:06.159Z",
+  "results": [
+    {
+      "name": "creator: receipt loads, paper stage idle with a Rive canvas",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "hover on a cost line reaches the scene as cosmetic proximity only",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "local refusal is ink, not a seal; nothing sent to the server yet",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "sealing: pending is ambiguous until the server answers, then sealed",
+      "ok": true,
+      "detail": "phases pending>sealed>waiting"
+    },
+    {
+      "name": "creator: waiting keeps an empty slot; no second impression exists",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "guest: opens the invite, paper blank, creator's refusal not in the page",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "guest: replying is pending (no second impression) until the server commits",
+      "ok": true,
+      "detail": "guest sees outcome The second impression sits off the first: not the same line."
+    },
+    {
+      "name": "creator: refresh reveals the same duplex; both captions agree on outcome",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "same refusal: a second duel where both refuse the same cost converges (registered impression)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "third browser cannot reveal: outsider sees an unavailable paper",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "negative: missing invite id closes the paper and offers recovery",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "failure: a rejected createDuel plays the failed paper, keeps the mark, never seals",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "reduced motion: no canvas is mounted, the static paper carries the truth, flow works",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "WebGL2 unavailable: DOM paper only, decisions still work",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Rive file fails to load: fallback takes over, no black screen",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "keyboard only: Tab to a cost, Enter refuses it, Tab to Seal, Enter seals",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "no horizontal overflow at 320 / 390 / 430 / 1280 in both locales",
+      "ok": true,
+      "detail": "320fr 320en 390fr 390en 430fr 430en 1280fr 1280en"
+    },
+    {
+      "name": "self-hosted Rive runtime: no unpkg/jsdelivr/rive.app request",
+      "ok": true,
+      "detail": "other pre-existing origins: https://grok.com"
+    },
+    {
+      "name": "no console/page errors across the run",
+      "ok": true,
+      "detail": ""
+    }
+  ]
+}

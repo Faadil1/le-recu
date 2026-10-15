@@ -9,3 +9,6 @@ artifacts
 screenshots
 .grok/*
 !.grok/app-env.json
+
+# Rive CLI build output (the runtime asset is published to public/rive/)
+rive/**/build/

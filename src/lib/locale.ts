@@ -177,6 +177,18 @@ export const ui = {
     errorExport:"Le reçu n'a pas pu être exporté.",
     errorReceipt:"Le reçu attend encore une deuxième décision.",
     errorShare:"Ton navigateur ne permet pas ce partage.",
+    paper:{
+      stage:"Le papier",
+      idle:"Le papier est vierge. Rien n'est refusé.",
+      ink:"Ton refus est marqué sur ce navigateur. Rien n'est encore envoyé ni scellé.",
+      pending:"En attente de la réponse du serveur. Rien n'est confirmé.",
+      sealed:"Scellé : le serveur a enregistré ton refus.",
+      waiting:"Scellé. L'emplacement de la deuxième empreinte reste vide jusqu'à sa vraie réponse.",
+      revealSame:"Deuxième empreinte posée exactement sur la première : même refus.",
+      revealDifferent:"Deuxième empreinte décalée de la première : pas la même ligne.",
+      failed:"Le serveur n'a pas confirmé. Le papier se rouvre : réessaie.",
+      unavailable:"Ce papier est fermé.",
+    },
   },
   en:{
     pending:"WAITING FOR A REPLY · 72h to answer",
@@ -279,6 +291,18 @@ export const ui = {
     errorExport:"Couldn't export the receipt.",
     errorReceipt:"This receipt still needs a second decision.",
     errorShare:"Sharing isn't available in this browser.",
+    paper:{
+      stage:"The paper",
+      idle:"The paper is blank. Nothing has been refused.",
+      ink:"Your refusal is marked in this browser. Nothing is sent or sealed yet.",
+      pending:"Waiting for the server to answer. Nothing is confirmed.",
+      sealed:"Sealed: the server has recorded your refusal.",
+      waiting:"Sealed. The slot for the second impression stays empty until their real answer.",
+      revealSame:"The second impression lands exactly on the first: the same refusal.",
+      revealDifferent:"The second impression sits off the first: not the same line.",
+      failed:"The server did not confirm. The paper reopens: try again.",
+      unavailable:"This paper is closed.",
+    },
   },
 } as const
 export function t(locale:Locale):typeof ui.fr|typeof ui.en {return ui[locale]}
