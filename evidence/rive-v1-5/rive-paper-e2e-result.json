@@ -2,7 +2,7 @@
   "evidence_class": "LOCAL",
   "base": "http://127.0.0.1:8080/",
   "database": "PGlite in-memory (no DATABASE_URL)",
-  "ran_at": "2026-10-16T05:40:55.416Z",
+  "ran_at": "2026-10-16T05:49:56.081Z",
   "metrics": {
     "ink_pixels_chosen_row": 2357,
     "ink_pixels_other_rows": [

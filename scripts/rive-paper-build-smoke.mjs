@@ -67,8 +67,8 @@ await step("production build: reduced motion mounts no canvas", async () => {
 
 await step("production build: no console or page errors", async () => { assert.deepEqual(errors, []) })
 await browser.close()
-mkdirSync("evidence/rive-v1-4", { recursive: true })
-writeFileSync("evidence/rive-v1-4/rive-paper-build-smoke-result.json", JSON.stringify({
+mkdirSync("evidence/rive-v1-5", { recursive: true })
+writeFileSync("evidence/rive-v1-5/rive-paper-build-smoke-result.json", JSON.stringify({
   evidence_class: "LOCAL (production build, vite preview; no database)", base: BASE, ran_at: new Date().toISOString(),
   known_preview_notes: [...new Set(notes)], results,
 }, null, 2))

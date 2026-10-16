@@ -1,0 +1,26 @@
+{
+  "evidence_class": "LOCAL (production build, vite preview; no database)",
+  "base": "http://127.0.0.1:4173/",
+  "ran_at": "2026-10-16T05:52:23.328Z",
+  "known_preview_notes": [
+    "wasm streaming compile failed: TypeError: Failed to execute 'compile' on 'WebAssembly': Incorrect response MIME type. Expected 'application/",
+    "falling back to ArrayBuffer instantiation"
+  ],
+  "results": [
+    {
+      "name": "production build: Rive canvas goes live from bundled, self-hosted assets",
+      "ok": true,
+      "detail": "/rive/le-recu-paper.riv, /assets/rive-BHUgDsdB.wasm, /assets/rive-BHUgDsdB.wasm, /rive/le-recu-paper.riv"
+    },
+    {
+      "name": "production build: reduced motion mounts no canvas",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "production build: no console or page errors",
+      "ok": true,
+      "detail": ""
+    }
+  ]
+}
