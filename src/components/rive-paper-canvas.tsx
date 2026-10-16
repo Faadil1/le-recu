@@ -3,71 +3,46 @@ import { Alignment, Fit, Layout, useRive, useViewModel, useViewModelInstance } f
 import { RuntimeLoader } from "@rive-app/webgl2"
 import riveWasmUrl from "@rive-app/webgl2/rive.wasm?url"
 import riveFallbackWasmUrl from "@rive-app/webgl2/rive_fallback.wasm?url"
-import {
-  RIVE_ARTBOARD, RIVE_ASSET_URL, RIVE_STATE_MACHINE, RIVE_VIEW_MODEL,
-  type RiveViewModelWrite,
-} from "@/lib/rive-paper-contract"
+import { RIVE_ARTBOARD, RIVE_ASSET_URL, RIVE_STATE_MACHINE, RIVE_VIEW_MODEL, type RiveWrites } from "@/lib/rive-paper-contract"
 
-// Self-host the Rive runtime: no third-party CDN (unpkg/jsdelivr) request, no runtime fetched from outside our origin.
+// Self-host the Rive runtime: no third-party CDN (unpkg/jsdelivr) request.
 RuntimeLoader.setWasmUrl(riveWasmUrl)
 RuntimeLoader.setWasmFallbackUrl(riveFallbackWasmUrl)
 
 export type PaperCanvasStatus = "loading" | "ready" | "error"
 
-type Props = {
-  values: RiveViewModelWrite
-  proximity: number
-  onStatus: (status: PaperCanvasStatus) => void
-}
+type Props = { values: RiveWrites; onStatus: (status: PaperCanvasStatus) => void }
 
-// Client-only. Loaded lazily by RivePaperStage; a throw here is caught by its error boundary
-// and the HTML/CSS paper keeps telling the truth.
-export default function RivePaperCanvas({ values, proximity, onStatus }: Props) {
+// Client-only, lazy. The canvas is a transparent overlay laid over the real cost list: pointer-events none,
+// aria-hidden, no focus. Its artboard is laid out to the canvas size so scene units are CSS pixels.
+export default function RivePaperCanvas({ values, onStatus }: Props) {
   const { rive, RiveComponent } = useRive({
     src: RIVE_ASSET_URL,
     artboard: RIVE_ARTBOARD,
     stateMachine: RIVE_STATE_MACHINE,
     autoplay: true,
-    layout: new Layout({ fit: Fit.Cover, alignment: Alignment.Center }),
-    // The canvas is feedback only: it never owns pointer, touch or keyboard input.
+    layout: new Layout({ fit: Fit.Layout, alignment: Alignment.TopLeft }),
     shouldDisableRiveListeners: true,
     onLoadError: () => onStatus("error"),
   })
   const viewModel = useViewModel(rive, { name: RIVE_VIEW_MODEL })
   const instance = useViewModelInstance(viewModel, { useDefault: true, rive })
   const reported = useRef(false)
+  // Only write what changed: re-writing an unchanged phase would let the state machine re-enter its state and replay it.
+  const written = useRef<Record<string, number>>({})
 
-  // outcome and markKept are written before phase so the state machine evaluates a consistent set.
+  // Geometry first, then viewerFirst / outcome / phase last, so the state machine always evaluates a
+  // consistent set (a reveal never starts against the previous row's coordinates).
   useEffect(() => {
     if (!instance) return
-    const write = (name: string, value: number) => {
+    const set = (name: string) => {
       const prop = instance.number(name)
-      if (prop) prop.value = value
+      if (prop && name in values && written.current[name] !== values[name]) { prop.value = values[name]; written.current[name] = values[name] }
     }
-    write("outcome", values.outcome)
-    write("markKept", values.markKept)
-    write("phase", values.phase)
-    if (!reported.current) {
-      reported.current = true
-      onStatus("ready")
-    }
-  }, [instance, values.phase, values.outcome, values.markKept, onStatus])
+    for (const name of Object.keys(values)) if (!["phase", "outcome", "viewerFirst"].includes(name)) set(name)
+    set("viewerFirst"); set("outcome"); set("phase")
+    if (!reported.current) { reported.current = true; onStatus("ready") }
+  }, [instance, values, onStatus])
 
-  // Ease the cosmetic proximity toward its target so the bristles lean instead of snapping.
-  const eased = useRef(0)
-  useEffect(() => {
-    const prop = instance?.number("proximity")
-    if (!prop) return
-    let frame = 0
-    const step = () => {
-      eased.current += (proximity - eased.current) * 0.2
-      if (Math.abs(proximity - eased.current) < 0.004) eased.current = proximity
-      prop.value = eased.current
-      if (eased.current !== proximity) frame = requestAnimationFrame(step)
-    }
-    frame = requestAnimationFrame(step)
-    return () => cancelAnimationFrame(frame)
-  }, [instance, proximity])
-
-  return <RiveComponent aria-hidden="true" tabIndex={-1} className="rive-paper-canvas" />
+  return <RiveComponent aria-hidden="true" tabIndex={-1} className="ink-canvas" />
 }

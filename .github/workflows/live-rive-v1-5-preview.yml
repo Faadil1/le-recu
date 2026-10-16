@@ -1,0 +1,48 @@
+name: LE REÇU V1.5 — Live inline-ink Rive & Neon Preview QA
+# Manual only: run it against an isolated Vercel Preview of this branch (le-recu-invite-beta, Neon staging).
+# The scripts refuse any URL that is not https://le-recu-invite-beta-*.vercel.app/. Nothing here touches production.
+on:
+  push:
+    branches:
+      - design/rive-inline-gesture-v1-5
+    paths:
+      - .github/workflows/live-rive-v1-5-preview.yml
+  workflow_dispatch:
+    inputs:
+      live_url:
+        description: "Isolated Preview URL (https://le-recu-invite-beta-<hash>-<scope>.vercel.app/)"
+        required: true
+permissions:
+  contents: read
+jobs:
+  live-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      LIVE_BETA_URL: ${{ inputs.live_url || 'https://le-recu-invite-beta-3mh044t9y-faadil1s-projects.vercel.app/' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm run rive:check
+      - run: npm run typecheck
+      - run: npm run test:product
+      - run: node --check scripts/rive-paper-live-smoke.mjs
+      - run: node --check scripts/live-beta-e2e.mjs
+      - run: npx playwright install --with-deps chromium
+      - name: Hosted Rive canvas, inline ink on the chosen row, reduced-motion twin
+        run: node scripts/rive-paper-live-smoke.mjs
+      - name: Real Neon staging FR to EN duplex, exports, outsider privacy and erasure
+        run: node scripts/live-beta-e2e.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: le-recu-v1-5-live-rive-neon
+          path: |
+            playwright-artifacts/
+            playwright-artifacts-rive/
+          if-no-files-found: ignore
+          retention-days: 7

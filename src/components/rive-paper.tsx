@@ -1,7 +1,7 @@
-import { Component, lazy, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
+import { Component, lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import {
-  RIVE_ASSET_URL, paperDescriptionKey, toViewModelValues,
-  type RivePaperState, type RivePhaseName,
+  RIVE_ASSET_URL, buildGeometry, paperDescriptionKey, toViewModelValues, twinVisibility,
+  type InkGeometry, type InkRows, type LineRect, type RivePaperState, type RivePhaseName,
 } from "@/lib/rive-paper-contract"
 import { t, type Locale } from "@/lib/locale"
 import type { PaperCanvasStatus } from "./rive-paper-canvas"
@@ -9,25 +9,21 @@ import type { PaperCanvasStatus } from "./rive-paper-canvas"
 const loadCanvas = () => import("./rive-paper-canvas")
 const RivePaperCanvas = lazy(loadCanvas)
 
+export type InkMode = "loading" | "rive" | "fallback-reduced" | "fallback-webgl" | "fallback-error"
+
 type Props = {
   state: RivePaperState
   /** phase actually shown (the confirmed-seal impact is layered on by the caller) */
   phase: RivePhaseName
-  proximity: number
+  rows: InkRows
+  hoverIndex: number | null
+  /** anything that changes the text layout (locale, desire, row count) */
+  layoutKey: string
   locale: Locale
-  /** the person's own refused cost, shown by the fallback only; never sent to the scene */
-  refusedLabel: string
 }
 
-export type PaperStageMode = "loading" | "rive" | "fallback-reduced" | "fallback-webgl" | "fallback-error"
-
 function webgl2Available(): boolean {
-  try {
-    const canvas = document.createElement("canvas")
-    return !!canvas.getContext("webgl2")
-  } catch {
-    return false
-  }
+  try { return !!document.createElement("canvas").getContext("webgl2") } catch { return false }
 }
 
 function usePrefersReducedMotion(): boolean {
@@ -50,100 +46,126 @@ class CanvasBoundary extends Component<{ onError: () => void; children: ReactNod
   render() { return this.state.failed ? null : this.props.children }
 }
 
-/** Static, accessible paper that tells exactly the same truth as the Rive scene. */
-function FallbackPaper({ phase, state, refusedLabel }: { phase: RivePhaseName; state: RivePaperState; refusedLabel: string }) {
-  const sealed = phase === "sealed" || phase === "waiting" || phase === "reveal"
-  const inked = phase !== "idle" && phase !== "unavailable" && !(phase === "failed" && !state.markKept)
-  const second = phase === "reveal"
-  const apart = second && state.outcome === "different"
+/** The real, rendered line boxes of one cost label, in the overlay's coordinate space. */
+function measureRows(host: HTMLElement, index: number | null): LineRect[] | null {
+  if (index === null) return null
+  const label = host.parentElement?.querySelector<HTMLElement>(`[data-cost-index="${index}"]`)
+  if (!label) return null
+  const range = document.createRange()
+  range.selectNodeContents(label)
+  const origin = host.getBoundingClientRect()
+  const seen = new Set<number>()
+  const out: LineRect[] = []
+  for (const r of Array.from(range.getClientRects())) {
+    if (r.width < 1 || r.height < 1) continue
+    const top = Math.round(r.top - origin.top)
+    if (seen.has(top)) continue
+    seen.add(top)
+    out.push({ left: r.left - origin.left, top: r.top - origin.top, width: r.width, height: r.height })
+  }
+  return out.sort((a, b) => a.top - b.top)
+}
+
+/** Static, accessible twin: the same ink at the same measured coordinates, no animation required. */
+function InkTwin({ geometry, state, phase }: { geometry: InkGeometry; state: RivePaperState; phase: RivePhaseName }) {
+  const v = twinVisibility(state, phase)
+  const seg = (s: { x: number; y: number; w: number }, key: string, cls: string) => (
+    <path key={key} className={cls} d={`M${s.x} ${s.y} L${s.x + s.w * 100} ${s.y}`} />
+  )
   return (
-    <svg className="paper-fallback" data-phase={phase} viewBox="0 0 360 240" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
-      <path className="pf-guide" d="M48 126 Q 120 112 180 122 T 312 120" />
-      {inked ? <path className="pf-ink" d="M48 126 Q 120 112 180 122 T 312 120" /> : null}
-      {phase === "pending" ? <circle className="pf-pending" cx="180" cy="120" r="50" /> : null}
-      {phase === "waiting" ? <circle className="pf-slot" cx="180" cy="120" r="54" /> : null}
-      {sealed ? (
-        <g className="pf-seal" transform={apart ? "translate(-28 0)" : undefined}>
-          <circle cx="180" cy="120" r="46" className="pf-ring-a" />
-          <circle cx="180" cy="120" r="37" className="pf-ring-b" />
-          <circle cx="180" cy="120" r="3.5" className="pf-core" />
+    <svg className="ink-twin" data-phase={phase} data-dim={v.dim ? "true" : "false"} width={geometry.width} height="100%" focusable="false" aria-hidden="true">
+      {v.first ? geometry.first.map((s, i) => seg(s, `a${i}`, "ink-a")) : null}
+      {v.second ? geometry.second.map((s, i) => seg(s, `b${i}`, "ink-b")) : null}
+      {v.pending && geometry.seal1 ? <circle className="ink-pending" cx={geometry.seal1.x} cy={geometry.seal1.y} r="26" /> : null}
+      {v.connector && geometry.connector ? <path className="ink-conn" d={`M${geometry.connector.x} ${geometry.connector.y} V${geometry.connector.y + geometry.connector.h}`} /> : null}
+      {v.seal1 && geometry.seal1 ? (
+        <g className="ink-seal-a" transform={`translate(${geometry.seal1.x} ${geometry.seal1.y})`}>
+          <circle r="21" className="ink-ring-a" /><circle r="16.5" className="ink-ring-b" /><circle r="2.3" className="ink-core" />
         </g>
       ) : null}
-      {second ? (
-        <g className="pf-second" transform={apart ? "translate(58 -8)" : undefined}>
-          <circle cx="180" cy="120" r="46" className="pf-ring-c" />
-          <circle cx="180" cy="120" r="37" className="pf-ring-d" />
+      {v.seal2 && geometry.seal2 ? (
+        <g className="ink-seal-b" transform={`translate(${geometry.seal2.x} ${geometry.seal2.y})`}>
+          <circle r="21" className="ink-ring-c" /><circle r="16.5" className="ink-ring-d" />
         </g>
       ) : null}
-      {phase === "failed" ? <path className="pf-slit" d="M177 48 L184 94 L176 142 L182 194" /> : null}
-      <title>{refusedLabel}</title>
     </svg>
   )
 }
 
-export function RivePaperStage({ state, phase, proximity, locale, refusedLabel }: Props) {
+const EMPTY: InkGeometry = { width: 0, first: [], second: [], ghost: [], seal1: null, seal2: null, connector: null }
+
+/** Overlay laid over the real cost list (the parent must be position: relative and contain the labels). */
+export function RiveInkOverlay({ state, phase, rows, hoverIndex, layoutKey, locale }: Props) {
   const words = t(locale)
   const reduced = usePrefersReducedMotion()
+  const hostRef = useRef<HTMLDivElement | null>(null)
   const [mounted, setMounted] = useState(false)
   const [webgl, setWebgl] = useState(true)
   const [canvas, setCanvas] = useState<PaperCanvasStatus>("loading")
   const [crashed, setCrashed] = useState(false)
+  const [geometry, setGeometry] = useState<InkGeometry>(EMPTY)
+  const [tick, setTick] = useState(0)
 
-  useEffect(() => {
-    setMounted(true)
-    setWebgl(webgl2Available())
-  }, [])
+  useEffect(() => { setMounted(true); setWebgl(webgl2Available()) }, [])
 
-  // Warm the runtime + scene while the person is still choosing, so the first ink stroke is not late.
+  // Warm the runtime + scene while the person is still choosing, so the first stroke is not late.
   useEffect(() => {
     if (!mounted || reduced || !webgl) return
     void loadCanvas().catch(() => undefined)
     void fetch(RIVE_ASSET_URL, { cache: "force-cache" }).catch(() => undefined)
   }, [mounted, reduced, webgl])
 
-  const mode: PaperStageMode = !mounted ? "loading"
+  // Re-measure whenever the real text can have moved: container size, web fonts, orientation.
+  useEffect(() => {
+    const host = hostRef.current
+    if (!host) return
+    const bump = () => setTick((n) => n + 1)
+    const observer = typeof ResizeObserver === "function" ? new ResizeObserver(bump) : null
+    observer?.observe(host)
+    window.addEventListener("resize", bump)
+    void document.fonts?.ready.then(bump)
+    return () => { observer?.disconnect(); window.removeEventListener("resize", bump) }
+  }, [mounted])
+
+  const different = state.outcome === "different"
+  const measure = useCallback(() => {
+    const host = hostRef.current
+    if (!host) return
+    const next = buildGeometry({
+      width: host.clientWidth,
+      first: measureRows(host, rows.first),
+      second: measureRows(host, rows.second),
+      ghost: measureRows(host, hoverIndex),
+      differentOutcome: different,
+    })
+    setGeometry((prev) => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next))
+  }, [rows.first, rows.second, hoverIndex, different])
+  useLayoutEffect(() => { measure() }, [measure, layoutKey, tick, phase])
+
+  const mode: InkMode = !mounted ? "loading"
     : reduced ? "fallback-reduced"
     : !webgl ? "fallback-webgl"
     : crashed || canvas === "error" ? "fallback-error"
     : "rive"
   const live = mode === "rive" && canvas === "ready"
-  const sectionRef = useRef<HTMLElement | null>(null)
-
-  // The moments that matter (the ink strike, a confirmed seal, a failure, the second impression) must be
-  // seen: Rive pauses off-screen canvases, so bring the paper into view on a *transition* instead of animating
-  // unseen. Never on first render, so reopening a page does not jump the scroll position.
-  const previousPhase = useRef<RivePhaseName | null>(null)
-  useEffect(() => {
-    const before = previousPhase.current
-    previousPhase.current = phase
-    if (!mounted || before === null || before === phase || !["ink", "sealed", "failed", "reveal"].includes(phase)) return
-    const el = sectionRef.current
-    if (!el) return
-    const rect = el.getBoundingClientRect()
-    const vh = window.innerHeight || document.documentElement.clientHeight
-    const visible = Math.min(rect.bottom, vh) - Math.max(rect.top, 0)
-    if (visible >= rect.height * 0.7) return
-    el.scrollIntoView({ block: "center", behavior: reduced ? "auto" : "smooth" })
-  }, [phase, mounted, reduced])
-
-  const values = useMemo(() => toViewModelValues(state, phase), [state, phase])
+  const values = useMemo(() => toViewModelValues(state, phase, geometry, hoverIndex === null ? 0 : 1), [state, phase, geometry, hoverIndex])
   const description = words.paper[paperDescriptionKey(state, phase)]
-  const compact = phase === "idle"
 
   return (
-    <section ref={sectionRef} className="paper-stage" data-stage-mode={mode} data-stage-live={live ? "true" : "false"}
-      data-stage-phase={phase} data-stage-size={compact ? "compact" : "full"} aria-label={words.paper.stage}>
-      <div className="paper-stage-frame" aria-hidden="true">
-        <FallbackPaper phase={phase} state={state} refusedLabel={refusedLabel} />
-        {mode === "rive" ? (
+    <div ref={hostRef} className="ink-overlay" data-ink-mode={mode} data-ink-live={live ? "true" : "false"} data-ink-phase={phase}
+      data-ink-first={rows.first ?? ""} data-ink-second={rows.second ?? ""}
+      data-ink-geometry={JSON.stringify({ first: geometry.first, second: geometry.second, seal1: geometry.seal1, seal2: geometry.seal2, connector: geometry.connector })}>
+      <InkTwin geometry={geometry} state={state} phase={phase} />
+      {mode === "rive" ? (
+        <div className="ink-canvas-wrap" aria-hidden="true">
           <CanvasBoundary onError={() => setCrashed(true)}>
             <Suspense fallback={null}>
-              <RivePaperCanvas values={values} proximity={proximity} onStatus={setCanvas} />
+              <RivePaperCanvas values={values} onStatus={setCanvas} />
             </Suspense>
           </CanvasBoundary>
-        ) : null}
-      </div>
-      <p className="paper-stage-caption" role="status" aria-live="polite">{description}</p>
-    </section>
+        </div>
+      ) : null}
+      <p className="sr-only" role="status" aria-live="polite">{description}</p>
+    </div>
   )
 }
