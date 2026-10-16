@@ -1,7 +1,7 @@
 # LE REÇU V1.5 — One continuous gesture (Rive inline ink) — build evidence
 
 Branch `design/rive-inline-gesture-v1-5`, base `27482de` (V1.4). Contract: `product/LE-RECU-V1-5-ONE-CONTINUOUS-GESTURE.md`.
-Nothing merged, PR #2 untouched, production and Neon untouched, **no Vercel Preview of this SHA exists yet** (see BLOCKED).
+Nothing merged, PR #2 untouched, production and Neon untouched, a Preview was deployed by the owner afterwards (see LIVE section).
 Evidence classes: **VISUAL** (Rive CLI headless frame), **LOCAL** (real browser, real server functions, real SQL on in-memory PGlite, real DOM geometry and real canvas pixels), **LIVE** (deployed Preview on Neon staging, *none produced*).
 
 ## What changed for the person
@@ -26,10 +26,24 @@ The refusal is no longer a decorative strip under the list. Tapping a cost draws
 | P12 | Participant erase | PROVEN | LOCAL | erase confirmed, other browser sees `unavailable`; outsider denied |
 | — | Unmodified `scripts/live-beta-e2e.mjs` | PROVEN | LOCAL | run from a scratch copy with the URL guard bypassed, against the local PGlite server (guard in the repo is untouched) |
 | — | Production build serves the overlay | PROVEN | LOCAL | clean worktree of code SHA `79d4ab7`, real `npm ci`, `tsc`, 43+8 product tests, `rive:check`, `vite build`, `vite preview` smoke (no database) |
-| — | **LIVE staging for this SHA (P2–P8, P11, P12 on Neon)** | **BLOCKED** | — | no Preview exists; the session's Vercel CLI is signed in as `bfaadil-a11y`, the project `le-recu-invite-beta` lives in scope `faadil1s-projects` |
+| — | LIVE staging on the Preview (P0–P2, P4–P6, P11, P12, same/different) | PROVEN (scoped) | LIVE/STAGING | see "LIVE" below: Preview `le-recu-invite-beta-3mh044t9y`, Neon staging |
 | — | Real devices, screen reader, sustained use | **BLOCKED / UNKNOWN** | — | not available here |
 
 Release decision is unchanged: **BLOCKED**. `product/LIVE-PRODUCT-REALITY.json` is unchanged; every gate keeps its status (the 20 production-required gates stay BLOCKED; `live-core-loop-staging` stays PROVEN only for its original V1.3 SHA, V1.4's Rive/Neon proof only for `704be0c`). V1.5 must earn its own SHA on Neon staging.
+
+## LIVE (Preview + Neon staging), 2026-10-16
+
+Preview: `https://le-recu-invite-beta-3mh044t9y-faadil1s-projects.vercel.app/` (deployed by the owner; project `le-recu-invite-beta`, scope `faadil1s-projects`). Binding: the served `/rive/le-recu-paper.riv` is 14 043 bytes with sha256 `c5b891e7…f3a5`, identical to this branch's `PROVENANCE.json`; the deployed *application* SHA cannot be read from outside, so it is bound by the Rive binary and by behaviour (inline ink DOM attributes), not by a deployment record. Scope: automated Chromium on this machine (not the GitHub workflow: `workflow_dispatch` needs the workflow on the default branch), software GL, no real device.
+
+```text
+node scripts/rive-paper-live-smoke.mjs   PASS  hosted .riv, live canvas, state change on a real choice, reduced-motion twin
+node scripts/live-beta-e2e.mjs           PASS  FR creator -> EN recipient -> Neon reply -> both duplex views -> PNG -> outsider denied -> erase
+node scripts/rive-paper-live-inline.mjs  PASS  12 executed checks (below); skipped steps are listed as SKIPPED in the result file
+```
+
+Executed LIVE inline checks: P0 live Rive canvas inert over the list · hover ghost only · P1 ink on the text of row 3 (2 357 red px, 0 elsewhere, no POST) · P2 slow server (route delayed 2.6 s): `pending>sealed>waiting`, no seal while pending · P4 seal anchored on the chosen row · P5 blind guest has no ink/seal/outcome and 0 red pixels · P6 different rows, canonical first/second, connector, both browsers · P11 FR and EN posters 1080×1350 PNG · same-row and different-row repeats (rows 4/4 and 2/4), each erased afterwards · P12 outsider denied, erase closes the invite for the other browser · unknown id recovery · no console errors · no third-party Rive runtime. Skipped on LIVE on purpose (they would leave undeleted staging rows or only exercise the client): reduced motion, WebGL2/404 fallbacks, keyboard, layout matrix, wrapped label, fold, failure injection — all PROVEN LOCAL above. Result: `evidence/rive-v1-5/live-rive-paper-e2e-result.json`, frames `evidence/rive-v1-5/live-browser-frames/`.
+
+Still **not** proven: real iPhone/Android, screen reader, outage and Neon cold-start recovery, repeated independent human use, any production gate. Release decision stays BLOCKED.
 
 ## Two compiled directions (both Rive CLI frames, same view model and state machine)
 
@@ -80,6 +94,6 @@ Files: `evidence/rive-v1-5/{directions,rive-cli-frames,browser-frames}/`, `rive-
 
 ## To unblock LIVE
 
-1. Deploy this SHA to the existing `le-recu-invite-beta` Preview in scope `faadil1s-projects` with the Preview-only Neon staging `DATABASE_URL` (needs the owner's Vercel login, which this session does not have).
-2. Run the `live-rive-v1-5-preview` workflow with that URL (hosted smoke + unmodified `live-beta-e2e.mjs`), then add inline-row assertions P2–P8 on the hosted build.
-3. Real iPhone Safari and Android Chrome pass; screen reader pass.
+1. (done) Preview deployed by the owner; hosted smoke, `live-beta-e2e.mjs` and the inline LIVE E2E passed from this machine.
+2. Make the Preview deployment record bind the application SHA (Vercel deployment id + commit) in this file.
+3. Real iPhone Safari and Android Chrome pass; screen reader pass; outage / cold-start recovery; uncoached human use.

@@ -1,0 +1,127 @@
+{
+  "evidence_class": "LIVE/STAGING (Vercel Preview + Neon staging)",
+  "base": "https://le-recu-invite-beta-3mh044t9y-faadil1s-projects.vercel.app/",
+  "database": "Neon staging via the deployed Preview",
+  "ran_at": "2026-10-16T10:48:31.969Z",
+  "metrics": {
+    "ink_pixels_chosen_row": 2357,
+    "ink_pixels_other_rows": [
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "results": [
+    {
+      "name": "P0 creator: receipt loads, overlay is a live Rive canvas over the list, input-inert",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "hover reaches the scene as a ghost of the real row only; phase unchanged",
+      "ok": true,
+      "detail": "phase idle, no strike (0 first segments)"
+    },
+    {
+      "name": "P1 FR creator taps cost #3: brush on the TEXT of row #3, no red elsewhere, no server POST",
+      "ok": true,
+      "detail": "chosen row 2357px red, others 0/0/0/0"
+    },
+    {
+      "name": "P2 slow server: pending keeps the provisional mark and shows no seal until the receipt",
+      "ok": true,
+      "detail": "phases pending>sealed>waiting"
+    },
+    {
+      "name": "P4 seal succeeds: owner waiting, seal anchored at the end of the chosen row's text, valid invite",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "P5 blind guest: no creator strike, chosen id, seal or outcome anywhere",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "P6 guest picks a different row: verified reveal on both browsers, creator's row red in both",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "P11 posters are real 1080x1350 PNGs; canonical first/second identical for both participants",
+      "ok": true,
+      "detail": "fr:1080x1350 en:1080x1350"
+    },
+    {
+      "name": "repeat: creator row 2, guest row 4 -> DIFFERENT on the real rows, both viewers",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "repeat: creator row 4, guest row 4 -> SAME on the real rows, both viewers",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "P12 outsider denied; participant erase closes the invite for the other browser",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "negative: unknown invite id closes the paper and offers recovery",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "P3 seal fails: no stamp, provisional mark stays on its row, retry succeeds [skipped on LIVE: would leave undeleted staging rows]",
+      "ok": true,
+      "detail": "SKIPPED"
+    },
+    {
+      "name": "guest reply fails: own local ink retracts, no second impression, retry works [skipped on LIVE: would leave undeleted staging rows]",
+      "ok": true,
+      "detail": "SKIPPED"
+    },
+    {
+      "name": "P9 reduced motion: no canvas, the SVG twin draws the same ink on the same row, flow works [skipped on LIVE: would leave undeleted staging rows]",
+      "ok": true,
+      "detail": "SKIPPED"
+    },
+    {
+      "name": "P9 WebGL2 unavailable and Rive file 404: the SVG twin carries the same ink, flow works [skipped on LIVE: would leave undeleted staging rows]",
+      "ok": true,
+      "detail": "SKIPPED"
+    },
+    {
+      "name": "P9 keyboard only: Tab/Enter refuses a cost and seals [skipped on LIVE: would leave undeleted staging rows]",
+      "ok": true,
+      "detail": "SKIPPED"
+    },
+    {
+      "name": "P10 layout: strike inside its text, no overflow or forced jump at 320/390/430/1440/1920, FR and EN, every row at 320 and 1440 [skipped on LIVE: would leave undeleted staging rows]",
+      "ok": true,
+      "detail": "SKIPPED"
+    },
+    {
+      "name": "wrapped label (forced 30px at 320px): one segment per real text line, ink on every line [skipped on LIVE: would leave undeleted staging rows]",
+      "ok": true,
+      "detail": "SKIPPED"
+    },
+    {
+      "name": "fold: V1.3 first-screen reading preserved (the overlay adds no height) [skipped on LIVE: would leave undeleted staging rows]",
+      "ok": true,
+      "detail": "SKIPPED"
+    },
+    {
+      "name": "self-hosted Rive runtime: no unpkg/jsdelivr/rive.app request",
+      "ok": true,
+      "detail": "other pre-existing origins: https://le-recu-invite-beta-3mh044t9y-faadil1s-projects.vercel.app, https://grok.com"
+    },
+    {
+      "name": "no console/page errors across the run",
+      "ok": true,
+      "detail": ""
+    }
+  ]
+}
