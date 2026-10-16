@@ -442,44 +442,69 @@
   .action-block > button:first-of-type:hover:not(:disabled) { transform: none; }
 }
 
-/* ── The Paper Remembers: Rive stage + accessible static twin ─────────────────────────────
-   The Rive canvas is transparent feedback layered on the paper. It never receives input
-   (pointer-events: none, aria-hidden); the SVG twin below is what shows when Rive is not
-   used (reduced motion, no WebGL2, load error) or has not loaded yet. */
-.paper-stage { margin-top: 1rem; }
-.paper-stage-frame {
-  position: relative;
-  width: 100%;
-  height: 176px;
-  overflow: hidden;
-  border-top: 1px dashed color-mix(in oklab, var(--color-ink) 28%, transparent);
-  border-bottom: 1px dashed color-mix(in oklab, var(--color-ink) 28%, transparent);
-  transition: height 320ms cubic-bezier(0.2, 0.8, 0.2, 1);
-  pointer-events: none;
-  user-select: none;
-}
-.paper-stage[data-stage-size="compact"] .paper-stage-frame { height: 96px; }
-.rive-paper-canvas,
-.paper-fallback { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
-.paper-fallback { transition: opacity 240ms ease-out; }
-.paper-stage[data-stage-live="true"] .paper-fallback { opacity: 0; }
-.paper-stage-caption {
-  margin-top: 0.5rem;
-  font-size: 0.75rem;
-  line-height: 1.45;
-  color: color-mix(in oklab, var(--color-ink) 68%, transparent);
-}
-.paper-fallback .pf-guide { fill: none; stroke: color-mix(in oklab, var(--color-ink) 22%, transparent); stroke-width: 2; stroke-dasharray: 8 7; }
-.paper-fallback .pf-ink { fill: none; stroke: var(--color-ink); stroke-width: 7; stroke-linecap: round; }
-.paper-fallback .pf-pending { fill: none; stroke: color-mix(in oklab, var(--color-ink) 55%, transparent); stroke-width: 2; stroke-dasharray: 4 9; }
-.paper-fallback .pf-slot { fill: none; stroke: color-mix(in oklab, var(--color-ink) 40%, transparent); stroke-width: 1; stroke-dasharray: 2 6; }
-.paper-fallback .pf-ring-a { fill: color-mix(in oklab, var(--color-stamp) 9%, transparent); stroke: var(--color-stamp); stroke-width: 3.4; }
-.paper-fallback .pf-ring-b { fill: none; stroke: var(--color-stamp); stroke-width: 1.3; }
-.paper-fallback .pf-core { fill: var(--color-stamp); }
-.paper-fallback .pf-ring-c { fill: none; stroke: var(--color-ink); stroke-width: 3.4; }
-.paper-fallback .pf-ring-d { fill: none; stroke: var(--color-ink); stroke-width: 1.3; }
-.paper-fallback .pf-slit { fill: none; stroke: var(--color-ink); stroke-width: 1.4; stroke-linecap: round; }
-.paper-fallback[data-phase="unavailable"] { opacity: 0.4; }
-@media (prefers-reduced-motion: reduce) {
-  .paper-stage-frame, .paper-fallback { transition: none; }
+/* ── V1.5 One continuous gesture: ink drawn directly on the chosen cost's real text ──────────
+   The Rive canvas / SVG twin is a transparent overlay over the cost list. It never receives input
+   (pointer-events: none, aria-hidden). The strike is drawn from measured text line boxes, so the
+   CSS line-through is hidden to avoid a double mark. */
+.ink-host { position: relative; }
+.ink-overlay { position: absolute; inset: 0; pointer-events: none; user-select: none; overflow: visible; }
+.ink-canvas-wrap, .ink-canvas, .ink-twin { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.ink-twin { transition: opacity 220ms ease-out; }
+.ink-overlay[data-ink-live="true"] .ink-twin { opacity: 0; }
+.ink-twin[data-dim="true"] { opacity: .55; }
+.ink-twin .ink-a { fill: none; stroke: var(--color-stamp); stroke-width: 6; stroke-linecap: round; opacity: .93; }
+.ink-twin .ink-b { fill: none; stroke: var(--color-ink); stroke-width: 6; stroke-linecap: round; opacity: .88; }
+.ink-twin .ink-pending { fill: none; stroke: color-mix(in oklab, var(--color-ink) 65%, transparent); stroke-width: 1.6; stroke-dasharray: 3 6; }
+.ink-twin .ink-conn { fill: none; stroke: color-mix(in oklab, var(--color-ink) 70%, transparent); stroke-width: 1.2; }
+.ink-twin .ink-ring-a { fill: color-mix(in oklab, var(--color-stamp) 9%, transparent); stroke: var(--color-stamp); stroke-width: 2.8; }
+.ink-twin .ink-ring-b { fill: none; stroke: var(--color-stamp); stroke-width: 1.1; }
+.ink-twin .ink-core { fill: var(--color-stamp); }
+.ink-twin .ink-ring-c { fill: none; stroke: var(--color-ink); stroke-width: 2.8; }
+.ink-twin .ink-ring-d { fill: none; stroke: var(--color-ink); stroke-width: 1.1; }
+.receipt-sheet .lines .line-btn .line-through.decoration-stamp { text-decoration-color: transparent; }
+@media (prefers-reduced-motion: reduce) { .ink-twin { transition: none; } }
+
+/* ── V1.5 desktop: an authored three-column composition, not a phone screenshot in a void ───────────
+   left: the editorial statement (quiet, sticky) · centre: the sheet with its cost rows, large enough for
+   the ink to be a gesture · right: the next honest action (sticky). Below 1100px the V1.4 column stays. */
+@media (min-width: 1100px) {
+  .receipt-world {
+    display: grid !important;
+    grid-template-columns: minmax(200px, 300px) minmax(560px, 700px) minmax(260px, 340px);
+    grid-auto-flow: row dense;
+    column-gap: clamp(32px, 4vw, 72px);
+    align-items: start;
+    justify-content: center;
+    max-width: 1520px;
+    padding-inline: clamp(24px, 3vw, 64px);
+  }
+  .receipt-world > * { grid-column: 2; min-width: 0; }
+  .receipt-world > .editorial-side {
+    display: flex;
+    position: sticky;
+    top: 22vh;
+    right: auto;
+    width: auto;
+    grid-column: 1;
+    grid-row: 1 / span 12;
+    align-self: start;
+    align-items: flex-end;
+    text-align: right;
+  }
+  .receipt-world .editorial-side strong,
+  .receipt-world .editorial-side em { font-size: clamp(26px, 2.5vw, 42px); }
+  .receipt-world > [data-actions] {
+    grid-column: 3;
+    grid-row: 1 / span 12;
+    position: sticky;
+    top: 32px;
+    align-self: start;
+    margin-top: 0;
+  }
+  .receipt-world .receipt-sheet { padding-inline: 44px; padding-block: 28px; }
+  .receipt-world .receipt-sheet h1 { font-size: clamp(34px, 3vw, 46px); }
+  .receipt-world [data-cost-index] { font-size: 1.3rem; line-height: 1.35; }
+  .receipt-world .line-btn { padding-block: 18px; }
+  .receipt-world .line-btn > span:nth-of-type(3) { font-size: 1rem; }
+  .receipt-world .mobile-next { display: none; }
 }

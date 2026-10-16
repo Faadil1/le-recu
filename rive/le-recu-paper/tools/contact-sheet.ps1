@@ -1,9 +1,9 @@
 # Composes captured frames into one labelled contact sheet (System.Drawing).
 #   powershell -File tools/contact-sheet.ps1 <dir> <prefix> <out.png> name1,name2,...
-param([string]$Dir, [string]$Prefix, [string]$Out, [string]$Names, [int]$Cols = 4)
+param([string]$Dir, [string]$Prefix, [string]$Out, [string]$Names, [int]$Cols = 4, [int]$FrameW = 360, [int]$FrameH = 240)
 Add-Type -AssemblyName System.Drawing
 $list = $Names -split ','
-$w = 360; $h = 240; $pad = 10; $lab = 18
+$w = $FrameW; $h = $FrameH; $pad = 10; $lab = 18
 $rows = [math]::Ceiling($list.Count / $Cols)
 $bmp = New-Object System.Drawing.Bitmap ($Cols * ($w + $pad) + $pad), ($rows * ($h + $lab + $pad) + $pad)
 $g = [System.Drawing.Graphics]::FromImage($bmp)

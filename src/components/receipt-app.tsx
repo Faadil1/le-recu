@@ -19,8 +19,8 @@ import { canonicalSelections, type DuelView } from "@/lib/duel-contract"
 import { canAdvanceChoice, experiencePhase } from "@/lib/experience-state"
 import { makeDuplexPoster } from "@/lib/duel-image"
 import { DuplexResult } from "@/components/duplex-result"
-import { RivePaperStage } from "@/components/rive-paper"
-import { SEALED_DWELL_MS, isFreshSeal, rivePaperState, visualPhase, type RivePhaseName } from "@/lib/rive-paper-contract"
+import { RiveInkOverlay } from "@/components/rive-paper"
+import { SEALED_DWELL_MS, inkRows, isFreshSeal, rivePaperState, visualPhase, type RivePhaseName } from "@/lib/rive-paper-contract"
 import { CATEGORY, challengeCopy, duelCopy, localizedCost, localizedDesire, localizedServerError, parseLocale, t, type Locale } from "@/lib/locale"
 
 const HISTORY_KEY = "lerecu.v1"
@@ -209,7 +209,8 @@ export function ReceiptApp() {
   const [eraseNotice, setEraseNotice] = useState("")
   const [duelError, setDuelError] = useState("")
   const [inviteUnreadable, setInviteUnreadable] = useState(false)
-  const [proximity, setProximity] = useState(0)
+  const [hoverIndex, setHoverIndex] = useState<number | null>(null)
+  const [localPick, setLocalPick] = useState<number | null>(null)
   const [seenPaperPhase, setSeenPaperPhase] = useState<RivePhaseName | null>(null)
   const [sealedHold, setSealedHold] = useState(false)
 
@@ -227,6 +228,7 @@ export function ReceiptApp() {
     else if (paperState.phase !== "waiting") setSealedHold(false)
   }
   const paperPhase = visualPhase(paperState.phase, sealedHold)
+  const rows = inkRows({ phase: paperPhase, viewerFirst: paperState.viewerFirst, role: duelRole, mine, theirs, localPick })
   const reveal = phase === "reveal"
   const shown = useMemo(() => present(lines, mine, theirs, reveal), [lines, mine, theirs, reveal])
   const words=t(locale)
@@ -352,6 +354,7 @@ export function ReceiptApp() {
     setDuelRole("guest")
     setDuelStatus("none")
     setDuelError("")
+    setLocalPick(null)
     setInviteUnreadable(false)
     setResponseChecked(false)
     setDuelUrl(null)
@@ -388,6 +391,7 @@ export function ReceiptApp() {
       }
       setBusy(true)
       setBusyAction("reply")
+      setLocalPick(index)
       setDuelError("")
       try {
         const view = await answerDuel({ data: { id: duelId, line: index, token } })
@@ -605,10 +609,11 @@ export function ReceiptApp() {
       ? words.hidden
       : duelId && duelRole === "owner" ? words.owner
         : mine !== null ? words.decided : words.intro
+  // "send it" only exists once the server has sealed the challenge: a local mark is provisional.
   const kicker = phase==="unavailable" ? words.stepUnavailable : reveal
     ? same ? words.kickerSame : words.kickerDifferent
     : duelId && duelRole === "guest" && duelStatus === "pending"
-      ? words.kickerBlind : mine !== null ? words.kickerReady : words.kickerToday
+      ? words.kickerBlind : mine !== null ? (duelId ? words.kickerWaiting : words.kickerLocal) : words.kickerToday
 
   const locked = mine !== null || spectacle || busy || (duelId !== null && duelStatus !== "pending")
   const canAdvance = canAdvanceChoice({id:duelId,role:duelRole,status:duelStatus,mine,theirs})
@@ -701,16 +706,24 @@ export function ReceiptApp() {
           {phase==="reply" ? (
             <p className="mt-3 border-l-2 border-stamp/55 pl-3 text-xs leading-relaxed text-ink/65">{words.betaGuest}</p>
           ) : null}
-          <ul className="lines mt-4 divide-y divide-ink/10"
-            onPointerOver={(event) => setProximity((event.target as HTMLElement).closest(".line-btn:not(:disabled)") ? 1 : 0)}
-            onPointerLeave={() => setProximity(0)}
-            onFocusCapture={() => setProximity(0.8)}
-            onBlurCapture={() => setProximity(0)}>
+          <div className="ink-host mt-4">
+          <ul className="lines divide-y divide-ink/10"
+            onPointerOver={(event) => {
+              const row = (event.target as HTMLElement).closest<HTMLElement>(".line-btn:not(:disabled)")
+              setHoverIndex(row ? Number(row.dataset.row) : null)
+            }}
+            onPointerLeave={() => setHoverIndex(null)}
+            onFocusCapture={(event) => {
+              const row = (event.target as HTMLElement).closest<HTMLElement>(".line-btn:not(:disabled)")
+              setHoverIndex(row ? Number(row.dataset.row) : null)
+            }}
+            onBlurCapture={() => setHoverIndex(null)}>
             {shown.map((line, index) => (
               <li key={line.id}>
                 <button
                   type="button"
                   className="tap line-btn min-h-11 w-full py-3 text-left disabled:opacity-100"
+                  data-row={index}
                   disabled={locked || !booted}
                   onClick={() => strike(index)}
                   aria-label={locked ? undefined : `${words.refuse} ${localizedCost(line,locale).label}`}
@@ -728,6 +741,8 @@ export function ReceiptApp() {
                     )}
                   </span>
                   <span
+                    data-cost-index={index}
+                    data-cost-id={line.id}
                     className={
                       line.refused
                         ? "mt-1 block text-base leading-normal line-through decoration-stamp"
@@ -741,7 +756,9 @@ export function ReceiptApp() {
               </li>
             ))}
           </ul>
-          <RivePaperStage state={paperState} phase={paperPhase} proximity={proximity} locale={locale} refusedLabel={myLabel} />
+          {/* The ink is drawn on the measured text of the chosen row(s): Rive when it can, an SVG twin otherwise. */}
+          <RiveInkOverlay state={paperState} phase={paperPhase} rows={rows} hoverIndex={locked ? null : hoverIndex} layoutKey={`${locale}:${desire}:${seed}:${shown.length}`} locale={locale} />
+          </div>
           {mine !== null && duelRole !== "responder" && (phase==="seal" || phase==="waiting") ? (
             <p className="mt-4 border-l-2 border-stamp/55 pl-3 text-xs leading-relaxed text-ink/65">
               {words.betaNotice}
