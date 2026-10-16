@@ -33,7 +33,7 @@ Release decision is unchanged: **BLOCKED**. `product/LIVE-PRODUCT-REALITY.json` 
 
 ## LIVE (Preview + Neon staging), 2026-10-16
 
-Preview: `https://le-recu-invite-beta-3mh044t9y-faadil1s-projects.vercel.app/` (deployed by the owner; project `le-recu-invite-beta`, scope `faadil1s-projects`). Binding: the served `/rive/le-recu-paper.riv` is 14 043 bytes with sha256 `c5b891e7…f3a5`, identical to this branch's `PROVENANCE.json`; the deployed *application* SHA cannot be read from outside, so it is bound by the Rive binary and by behaviour (inline ink DOM attributes), not by a deployment record. Scope: automated Chromium on this machine (not the GitHub workflow: `workflow_dispatch` needs the workflow on the default branch), software GL, no real device.
+Preview: `https://le-recu-invite-beta-3mh044t9y-faadil1s-projects.vercel.app/` (deployed by the owner; project `le-recu-invite-beta`, scope `faadil1s-projects`). Binding: deployed application SHA `c1254bc7d44e880cec26fe8c009da7323720621f` (deployment `dpl_3es2rSQHMF9tc8GioZ9iFBrsYZiQ`, recorded in `evidence/LE-RECU-V1-5-LIVE-PREVIEW-RIVE-NEON-2026-10-16.md`, which also records the independent GitHub run #38888528402 — SUCCESS); its code equals `79d4ab7` (later commits touch evidence/workflow only). Cross-check from this machine: the served `/rive/le-recu-paper.riv` is 14 043 bytes, sha256 `c5b891e7…f3a5`, equal to `PROVENANCE.json`. Scope: automated Chromium on this machine (not the GitHub workflow: `workflow_dispatch` needs the workflow on the default branch), software GL, no real device.
 
 ```text
 node scripts/rive-paper-live-smoke.mjs   PASS  hosted .riv, live canvas, state change on a real choice, reduced-motion twin
@@ -95,5 +95,5 @@ Files: `evidence/rive-v1-5/{directions,rive-cli-frames,browser-frames}/`, `rive-
 ## To unblock LIVE
 
 1. (done) Preview deployed by the owner; hosted smoke, `live-beta-e2e.mjs` and the inline LIVE E2E passed from this machine.
-2. Make the Preview deployment record bind the application SHA (Vercel deployment id + commit) in this file.
+2. (done) Deployment id and application SHA are bound in the sibling LIVE evidence file.
 3. Real iPhone Safari and Android Chrome pass; screen reader pass; outage / cold-start recovery; uncoached human use.
