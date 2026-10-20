@@ -317,12 +317,13 @@ export function challengeCopy(desire:string,locale:Locale):string {
     ?`LE REÇU\n« ${localizedDesire(desire,locale)} »\n\nCinq coûts. J'en ai refusé un.\nChoisis sans voir ma ligne.\n\nEt toi, tu barres quoi ?`
     :`THE RECEIPT\n“${localizedDesire(desire,locale)}”\n\nFive costs. I refused one.\nChoose without seeing mine.\n\nWhat would you cross out?`
 }
-export function duelCopy(desire:string,theirs:string,mine:string,locale:Locale):string {
+/** Same creator-first/responder-second portable wording for both participants. */
+export function duelCopy(desire:string,first:string,second:string,locale:Locale):string {
   const name=localizedDesire(desire,locale)
-  const same=theirs===mine
+  const same=first===second
   return locale==="fr"
-    ?`LE REÇU\n« ${name} »\n\neux — ${theirs}\ntoi — ${mine}\n\n${same?"même refus.":"pas la même ligne."}\nEt toi, tu barres quoi ?`
-    :`THE RECEIPT\n“${name}”\n\nthem — ${theirs}\nyou — ${mine}\n\n${same?"same refusal.":"not the same line."}\nWhat would you cross out?`
+    ?`LE REÇU\n« ${name} »\n\n01 / PREMIER REFUS — ${first}\n02 / SECOND REFUS — ${second}\n\n${same?"même refus.":"pas la même ligne."}\nEt toi, tu barres quoi ?`
+    :`THE RECEIPT\n“${name}”\n\n01 / FIRST REFUSAL — ${first}\n02 / SECOND REFUSAL — ${second}\n\n${same?"same refusal.":"not the same line."}\nWhat would you cross out?`
 }
 export function localizedServerError(message:string,locale:Locale):string {
   if(locale==="fr")return message
