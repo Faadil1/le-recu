@@ -240,6 +240,10 @@ export function ReceiptApp() {
   const theirLabel=theirs!==null&&reveal&&lines[theirs]?localizedCost(lines[theirs],locale).label:""
   const same = reveal && mine !== null && mine === theirs
   const ordered = canonicalSelections(duelRole, mine, theirs)
+  const firstLabel = reveal && ordered && lines[ordered.first]
+    ? localizedCost(lines[ordered.first],locale).label : ""
+  const secondLabel = reveal && ordered && lines[ordered.second]
+    ? localizedCost(lines[ordered.second],locale).label : ""
 
   useEffect(() => {
     if (!sealedHold) return
@@ -730,7 +734,7 @@ export function ReceiptApp() {
           ) : null}
           {reveal ? (
             <div data-duplex-reveal className="second-impression-header">
-              <DuplexResult same={same} mine={myLabel} theirs={theirLabel} locale={locale} />
+              <DuplexResult same={same} first={firstLabel} second={secondLabel} locale={locale} />
             </div>
           ) : null}
           <div className="ink-host mt-4">
