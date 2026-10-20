@@ -16,3 +16,15 @@ export function canAdvanceChoice(v:PhaseInput):boolean {
   if(v.id===null) return v.status==="none"
   return v.role==="owner" && v.status==="pending"
 }
+
+/**
+ * A deletion confirmation belongs to the previous, successfully erased
+ * challenge, never an active or newly selected receipt. New choices therefore
+ * remove it; this guard also prevents any stale state showing contradictory UI.
+ */
+export function showErasureNotice(v:{
+  message:string,id:string|null,mine:number|null,phase:Phase,
+}):boolean {
+  return v.message.trim().length>0 && v.id===null &&
+    v.mine===null && v.phase==="choose"
+}
