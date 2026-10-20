@@ -85,10 +85,26 @@ try {
   }
   await b.getByRole("button",{name:"EN",exact:true}).click()
   mkdirSync("playwright-artifacts",{recursive:true})
+  // Handheld display: one CTA, controlled by the sticky safe-area bar.
+  assert.equal(await a.locator("[data-actions] [data-primary-result-share]").isVisible(),false)
+  assert.equal(await b.locator("[data-actions] [data-primary-result-share]").isVisible(),false)
+  assert.ok(await a.locator(".mobile-next").getByRole("button",{name:"Partager l'image du duo"}).isVisible())
   await a.screenshot({path:"playwright-artifacts/duplex-fr-mobile.png",fullPage:true})
   await b.screenshot({path:"playwright-artifacts/duplex-en-mobile.png",fullPage:true})
+  // V1.5's three-column threshold used to overflow at intermediate widths.
+  for(const width of [1100,1440]){
+    await a.setViewportSize({width,height:900})
+    const layout=await a.evaluate(()=>({
+      scrollWidth:document.documentElement.scrollWidth,
+      viewport:window.innerWidth,
+    }))
+    assert.ok(layout.scrollWidth<=layout.viewport+1,
+      `horizontal overflow at ${width}px: ${JSON.stringify(layout)}`)
+    await a.screenshot({path:`playwright-artifacts/duplex-fr-${width}.png`,fullPage:true})
+  }
+  await a.setViewportSize({width:390,height:844})
   const ownerDownload=a.waitForEvent("download",{timeout:25000})
-  await a.locator("[data-actions]").getByRole("button",{name:"Partager l'image du duo"}).click()
+  await a.locator(".mobile-next").getByRole("button",{name:"Partager l'image du duo"}).click()
   const file=await ownerDownload
   assert.match(file.suggestedFilename(),/le-recu-duplex.*\.png/)
   await file.saveAs("playwright-artifacts/duplex-poster-fr.png")
@@ -97,7 +113,7 @@ try {
   assert.equal(png.readUInt32BE(16),1080)
   assert.equal(png.readUInt32BE(20),1350)
   const englishDownload=b.waitForEvent("download",{timeout:25000})
-  await b.locator("[data-actions]").getByRole("button",{name:"Share the duo image"}).click()
+  await b.locator(".mobile-next").getByRole("button",{name:"Share the duo image"}).click()
   const englishPoster=await englishDownload
   await englishPoster.saveAs("playwright-artifacts/duplex-poster-en.png")
   const pngEN=readFileSync("playwright-artifacts/duplex-poster-en.png")
