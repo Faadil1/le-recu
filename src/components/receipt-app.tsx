@@ -612,8 +612,8 @@ export function ReceiptApp() {
   }
 
   function showDuel() {
-    if (mine === null || theirs === null) return
-    void share(duelCopy(desire,theirLabel,myLabel,locale),"")
+    if (!ordered) return
+    void share(duelCopy(desire,firstLabel,secondLabel,locale),"")
   }
 
   const sub = reveal
@@ -873,8 +873,8 @@ export function ReceiptApp() {
               </button>
               <button type="button" className="tap min-h-12 w-full border border-paper/30 text-sm text-paper"
                 onClick={() => {
-                  if (mine === null || theirs === null) return
-                  void writeShare(duelCopy(desire,theirLabel,myLabel,locale),"")
+                  if (!ordered) return
+                  void writeShare(duelCopy(desire,firstLabel,secondLabel,locale),"")
                 }}>
                 {words.copyDuel}
               </button>
