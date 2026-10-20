@@ -838,7 +838,7 @@ export function ReceiptApp() {
         ) : null}
         {reveal ? (
           <>
-            <button type="button" disabled={posterBusy} className="tap h-12 w-full bg-paper text-sm font-medium text-ink disabled:opacity-50" onClick={() => void downloadDuelPoster()}>
+            <button type="button" data-primary-result-share disabled={posterBusy} className="tap h-12 w-full bg-paper text-sm font-medium text-ink disabled:opacity-50" onClick={() => void downloadDuelPoster()}>
               {posterBusy ? words.composing : words.poster}
             </button>
           </>
