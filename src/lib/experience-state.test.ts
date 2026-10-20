@@ -1,6 +1,6 @@
 import test from "node:test"
 import assert from "node:assert/strict"
-import { canAdvanceChoice, experiencePhase, verifiedReveal, type PhaseInput } from "./experience-state.ts"
+import { canAdvanceChoice, experiencePhase, showErasureNotice, verifiedReveal, type PhaseInput } from "./experience-state.ts"
 
 const base:PhaseInput={id:null,role:"guest",status:"none",mine:null,theirs:null}
 test("no participant is invented by an old local-only display state",()=>{
@@ -32,4 +32,12 @@ test("closed/expired challenges cannot be reshared as open invitations",()=>{
   assert.equal(canAdvanceChoice({...base,id:"inv",role:"owner",status:"expired",mine:1}),false)
   assert.equal(canAdvanceChoice({...base,id:"inv",role:"owner",status:"closed",mine:1}),false)
   assert.equal(canAdvanceChoice({...base,id:"inv",role:"guest",status:"pending",mine:1}),false)
+})
+
+test("a deletion confirmation cannot describe a currently active or newly chosen challenge",()=>{
+  assert.equal(showErasureNotice({message:"Challenge deleted",id:null,mine:null,phase:"choose"}),true)
+  assert.equal(showErasureNotice({message:"Challenge deleted",id:"new",mine:1,phase:"waiting"}),false)
+  assert.equal(showErasureNotice({message:"Challenge deleted",id:null,mine:0,phase:"seal"}),false)
+  assert.equal(showErasureNotice({message:"Challenge deleted",id:"guest",mine:null,phase:"reply"}),false)
+  assert.equal(showErasureNotice({message:" ",id:null,mine:null,phase:"choose"}),false)
 })
