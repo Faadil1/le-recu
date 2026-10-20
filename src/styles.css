@@ -405,7 +405,7 @@
 .duplex-note { font-size: 17px; line-height: 1.4; }
 .editorial-side { display: none; }
 
-@media(min-width: 1024px) {
+@media(min-width: 1240px) {
   .editorial-side {
     display: flex;
     position: fixed;
@@ -467,7 +467,7 @@
 /* ── V1.5 desktop: an authored three-column composition, not a phone screenshot in a void ───────────
    left: the editorial statement (quiet, sticky) · centre: the sheet with its cost rows, large enough for
    the ink to be a gesture · right: the next honest action (sticky). Below 1100px the V1.4 column stays. */
-@media (min-width: 1100px) {
+@media (min-width: 1240px) {
   .receipt-world {
     display: grid !important;
     grid-template-columns: minmax(200px, 300px) minmax(560px, 700px) minmax(260px, 340px);
@@ -627,7 +627,7 @@
   from { opacity: 0; transform: translateX(5px); }
   to { opacity: 1; transform: translateX(0); }
 }
-@media (min-width: 1100px) {
+@media (min-width: 1240px) {
   .receipt-sheet .duplex-cost { font-size: clamp(20px,1.7vw,27px); }
   .receipt-sheet .duplex-headline .duplex-verdict { width: 118px; min-height: 86px; font-size: 12px; }
 }
@@ -643,4 +643,10 @@
     opacity: 1;
     transform: none;
   }
+}
+
+/* On handheld viewports the sticky, safe-area-aware export is the single
+   primary CTA. Desktop keeps the same action in the right-hand column. */
+@media (max-width: 767px) {
+  [data-actions] [data-primary-result-share] { display: none; }
 }
