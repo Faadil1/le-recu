@@ -73,6 +73,22 @@ try {
   await b.getByRole("button",{name:"FR",exact:true}).click()
   assert.equal((await b.locator(".duplex-first .duplex-cost").innerText()).trim(),ownerFirst.trim())
   assert.equal((await b.locator(".duplex-second .duplex-cost").innerText()).trim(),ownerSecond.trim())
+  // The portable text must have the SAME creator-first order from both
+  // participants, just like the PNG. In FR both clipboard payloads agree.
+  for(const ctx of [original,other]){
+    await ctx.grantPermissions(["clipboard-read","clipboard-write"],{origin:apiOrigin})
+  }
+  for(const page of [a,b]){
+    await page.locator(".aftercare-tools summary").click()
+    await page.locator(".aftercare-tools").getByRole("button",{name:"Copier le duel"}).click()
+  }
+  const textFromOwner=await a.evaluate(()=>navigator.clipboard.readText())
+  const textFromResponder=await b.evaluate(()=>navigator.clipboard.readText())
+  assert.equal(textFromOwner,textFromResponder,"two roles export one canonical text receipt")
+  assert.ok(textFromOwner.indexOf("01 / PREMIER REFUS")<textFromOwner.indexOf("02 / SECOND REFUS"))
+  assert.doesNotMatch(textFromOwner,/(^|\\n)(toi|eux) — /m)
+  // Reclose secondary options for consistent first-visit screenshots.
+  for(const page of [a,b]) await page.locator(".aftercare-tools summary").click()
   // The outcome is now revealed INSIDE the sheet, before the marked rows;
   // no separate detached receipt or below-the-fold only outcome.
   for(const page of [a,b]){
