@@ -16,7 +16,7 @@ import {
 import { castStrike, readRoom } from "@/lib/room.functions"
 import { createDuel, readDuel, answerDuel, eraseDuel } from "@/lib/duel.functions"
 import { canonicalSelections, type DuelView } from "@/lib/duel-contract"
-import { canAdvanceChoice, experiencePhase } from "@/lib/experience-state"
+import { canAdvanceChoice, experiencePhase, showErasureNotice } from "@/lib/experience-state"
 import { makeDuplexPoster } from "@/lib/duel-image"
 import { DuplexResult } from "@/components/duplex-result"
 import { RiveInkOverlay } from "@/components/rive-paper"
@@ -207,6 +207,9 @@ export function ReceiptApp() {
   const [posterBusy, setPosterBusy] = useState(false)
   const [eraseBusy, setEraseBusy] = useState(false)
   const [eraseNotice, setEraseNotice] = useState("")
+  // Only an actual user-triggered response check or blind reply may bring the
+  // verified reveal into view; hydration/reopening must never force a scroll.
+  const [revealFromAction, setRevealFromAction] = useState(false)
   const [duelError, setDuelError] = useState("")
   const [inviteUnreadable, setInviteUnreadable] = useState(false)
   const [hoverIndex, setHoverIndex] = useState<number | null>(null)
@@ -237,6 +240,10 @@ export function ReceiptApp() {
   const theirLabel=theirs!==null&&reveal&&lines[theirs]?localizedCost(lines[theirs],locale).label:""
   const same = reveal && mine !== null && mine === theirs
   const ordered = canonicalSelections(duelRole, mine, theirs)
+  const firstLabel = reveal && ordered && lines[ordered.first]
+    ? localizedCost(lines[ordered.first],locale).label : ""
+  const secondLabel = reveal && ordered && lines[ordered.second]
+    ? localizedCost(lines[ordered.second],locale).label : ""
 
   useEffect(() => {
     if (!sealedHold) return
@@ -376,12 +383,16 @@ export function ReceiptApp() {
     setRoomJoined(false)
     setRoomOpen(false)
     setEraseNotice("")
+    setRevealFromAction(false)
     resetDuel()
     window.scrollTo({ top: 0, behavior: "auto" })
   }
 
   async function strike(index: number) {
     if (mine !== null || spectacle || busy) return
+    // A confirmation of deletion from a PREVIOUS duel is not a property of
+    // this new choice. This is the bug observed in the user video.
+    setEraseNotice("")
     if (duelId) {
       if (duelRole !== "guest" || duelStatus !== "pending") return
       const token = voterToken()
@@ -401,6 +412,7 @@ export function ReceiptApp() {
         setSpectacle(true)
         setDuelRole(view.role)
         setDuelStatus(view.status)
+        setRevealFromAction(true)
         setHistoryRows(pushHistory({ d: desire, s: seed, x: index, t: createdAt }))
       } catch (error) {
         setDuelError(error instanceof Error ? localizedServerError(error.message,locale) : words.errorReply)
@@ -551,6 +563,7 @@ export function ReceiptApp() {
         setMine(view.mine)
         setTheirs(view.theirs)
         setSpectacle(true)
+        setRevealFromAction(true)
       }
     } catch (error) {
       setDuelError(error instanceof Error ? localizedServerError(error.message,locale) : words.errorCheck)
@@ -599,8 +612,8 @@ export function ReceiptApp() {
   }
 
   function showDuel() {
-    if (mine === null || theirs === null) return
-    void share(duelCopy(desire,theirLabel,myLabel,locale),"")
+    if (!ordered) return
+    void share(duelCopy(desire,firstLabel,secondLabel,locale),"")
   }
 
   const sub = reveal
@@ -618,6 +631,19 @@ export function ReceiptApp() {
   const locked = mine !== null || spectacle || busy || (duelId !== null && duelStatus !== "pending")
   const canAdvance = canAdvanceChoice({id:duelId,role:duelRole,status:duelStatus,mine,theirs})
   const canShareResult=phase==="reveal"&&ordered!==null
+  const visibleEraseNotice=showErasureNotice({
+    message:eraseNotice,id:duelId,mine,phase,
+  })
+  useEffect(() => {
+    if (!reveal || !revealFromAction) return
+    const frame=window.requestAnimationFrame(()=>{
+      const target=document.querySelector<HTMLElement>("[data-duplex-reveal]")
+      if(!target) return
+      const reduce=window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false
+      target.scrollIntoView({block:"start",behavior:reduce?"instant":"smooth"})
+    })
+    return ()=>window.cancelAnimationFrame(frame)
+  },[reveal,revealFromAction])
   const flowLabels=[words.stepChoose, words.stepSeal,
     phase === "reply" ? words.stepReply : words.stepWaiting,words.stepReveal]
   const flowAt = phase==="unavailable" ? -1 : phase === "choose" ? 0 : phase === "seal" ? 1
@@ -706,6 +732,11 @@ export function ReceiptApp() {
           {phase==="reply" ? (
             <p className="mt-3 border-l-2 border-stamp/55 pl-3 text-xs leading-relaxed text-ink/65">{words.betaGuest}</p>
           ) : null}
+          {reveal ? (
+            <div data-duplex-reveal className="second-impression-header">
+              <DuplexResult same={same} first={firstLabel} second={secondLabel} locale={locale} />
+            </div>
+          ) : null}
           <div className="ink-host mt-4">
           <ul className="lines divide-y divide-ink/10"
             onPointerOver={(event) => {
@@ -780,9 +811,6 @@ export function ReceiptApp() {
                 </p>
               </div>
             ) : null}
-            {reveal ? (
-              <DuplexResult same={same} mine={myLabel} theirs={theirLabel} locale={locale} />
-            ) : null}
           </div>
           ) : null}
           <Rule seed={seed} />
@@ -810,11 +838,8 @@ export function ReceiptApp() {
         ) : null}
         {reveal ? (
           <>
-            <button type="button" disabled={posterBusy} className="tap h-12 w-full bg-paper text-sm font-medium text-ink disabled:opacity-50" onClick={() => void downloadDuelPoster()}>
+            <button type="button" data-primary-result-share disabled={posterBusy} className="tap h-12 w-full bg-paper text-sm font-medium text-ink disabled:opacity-50" onClick={() => void downloadDuelPoster()}>
               {posterBusy ? words.composing : words.poster}
-            </button>
-            <button type="button" className="tap h-12 w-full border border-paper/30 text-sm text-paper" onClick={showDuel}>
-              {words.copyText}
             </button>
           </>
         ) : null}
@@ -838,27 +863,38 @@ export function ReceiptApp() {
           </button>
         ) : null}
         {reveal ? (
-          <button
-            type="button"
-            className="tap h-12 w-full border border-paper/30 text-sm text-paper"
-            onClick={() => {
-              if (mine === null || theirs === null) return
-              void writeShare(
-                duelCopy(desire,theirLabel,myLabel,locale), "",
-              )
-            }}
-          >
-            {words.copyDuel}
-          </button>
-        ) : null}
-        {duelId && (duelRole === "owner" || duelRole === "responder") ? (
+          <details className="aftercare-tools border-t border-paper/20 pt-3">
+            <summary className="tap min-h-11 cursor-pointer py-3 text-xs tracking-widest text-paper/70">
+              {words.moreShare}
+            </summary>
+            <div className="mt-2 flex flex-col gap-2">
+              <button type="button" className="tap min-h-12 w-full border border-paper/30 text-sm text-paper" onClick={showDuel}>
+                {words.copyText}
+              </button>
+              <button type="button" className="tap min-h-12 w-full border border-paper/30 text-sm text-paper"
+                onClick={() => {
+                  if (!ordered) return
+                  void writeShare(duelCopy(desire,firstLabel,secondLabel,locale),"")
+                }}>
+                {words.copyDuel}
+              </button>
+              {duelId && (duelRole === "owner" || duelRole === "responder") ? (
+                <button type="button" disabled={eraseBusy || busy}
+                  className="tap min-h-12 w-full border border-stamp/60 text-sm text-paper/85 disabled:opacity-50"
+                  onClick={() => void eraseCurrentDuel()}>
+                  {eraseBusy ? words.erasing : words.erase}
+                </button>
+              ) : null}
+            </div>
+          </details>
+        ) : duelId && (duelRole === "owner" || duelRole === "responder") ? (
           <button type="button" disabled={eraseBusy || busy}
             className="tap min-h-12 w-full border border-stamp/60 text-sm text-paper/85 disabled:opacity-50"
             onClick={() => void eraseCurrentDuel()}>
             {eraseBusy ? words.erasing : words.erase}
           </button>
         ) : null}
-        {eraseNotice ? <p role="status" className="text-center text-sm text-paper/75">{eraseNotice}</p> : null}
+        {visibleEraseNotice ? <p role="status" className="text-center text-sm text-paper/75">{eraseNotice}</p> : null}
         {copied === "ok" ? <p role="status" className="text-center text-sm text-paper/70">{words.copied}</p> : null}
         {copied === "fail" ? (
           <pre className="overflow-x-auto text-xs leading-normal whitespace-pre-wrap text-paper/75">{shareBlock}</pre>

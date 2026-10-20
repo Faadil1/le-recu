@@ -45,9 +45,16 @@ test("FR and EN teaser do not leak a refusal and neither contains a response ind
   assert.match(french,/Cinq coûts/)
   assert.doesNotMatch(french,/dix-huit mois|l'air stable|creator_line/)
 })
-test("complete duel copy follows the selected reader language",()=>{
-  assert.match(duelCopy("partir","eighteen months","looking settled","en"),/not the same line/i)
-  assert.match(duelCopy("partir","dix-huit mois","l'air stable","fr"),/pas la même ligne/)
+test("complete duel copy is portable, creator-first in FR and EN",()=>{
+  const en=duelCopy("partir","eighteen months","looking settled","en")
+  const fr=duelCopy("partir","dix-huit mois","l'air stable","fr")
+  assert.match(en,/not the same line/i)
+  assert.match(fr,/pas la même ligne/)
+  assert.ok(en.indexOf("01 / FIRST REFUSAL — eighteen months") < en.indexOf("02 / SECOND REFUSAL — looking settled"))
+  assert.ok(fr.indexOf("01 / PREMIER REFUS — dix-huit mois") < fr.indexOf("02 / SECOND REFUS — l'air stable"))
+  assert.doesNotMatch(en,/them —|you —/i)
+  assert.doesNotMatch(fr,/eux —|toi —/i)
+  assert.match(duelCopy("partir","eighteen months","eighteen months","en"),/same refusal/i)
 })
 test("UI switch dictionary contains distinct concise status text in both languages",()=>{
   assert.equal(parseLocale("en"),"en")

@@ -1,24 +1,32 @@
 import { t, type Locale } from "@/lib/locale"
 
-type Props = { same: boolean; mine: string; theirs: string; locale: Locale }
+type Props = { same: boolean; first: string; second: string; locale: Locale }
 
-/** After a real second commitment, the single receipt gains its second impression. */
-export function DuplexResult({ same, mine, theirs, locale }: Props) {
+/**
+ * The SECOND physical impression appears at the top of the *same* sheet,
+ * directly above its real marked cost rows. Order is canonical on both
+ * participants' browsers: creator first, responder second.
+ * No animation can authorize or manufacture a second decision.
+ */
+export function DuplexResult({ same, first, second, locale }: Props) {
   const words=t(locale)
   return (
-    <section className="duplex-imprint w-full" aria-label={words.duelTitle}>
-      <p className="duplex-eyebrow">{words.duelTitle}</p>
+    <section className="duplex-imprint w-full" data-duplex-outcome={same?"same":"different"}
+      aria-label={words.duelTitle}>
+      <div className="duplex-headline">
+        <p className="duplex-eyebrow">{words.duelTitle}</p>
+        <p className="duplex-verdict">{same ? words.same : words.different}</p>
+      </div>
       <div className="duplex-plates">
         <div className="duplex-plate duplex-first">
-          <span className="duplex-index">{words.me}</span>
-          <span className="duplex-cost duplex-refused">{mine}</span>
+          <span className="duplex-index">{words.first}</span>
+          <span className="duplex-cost duplex-refused">{first}</span>
         </div>
         <div className="duplex-plate duplex-second">
-          <span className="duplex-index">{words.them}</span>
-          <span className="duplex-cost duplex-refused">{theirs}</span>
+          <span className="duplex-index">{words.second}</span>
+          <span className="duplex-cost duplex-refused">{second}</span>
         </div>
       </div>
-      <p className="duplex-verdict">{same ? words.same : words.different}</p>
       <p className="duplex-note">{same ? words.sameNote : words.diffNote}</p>
     </section>
   )
