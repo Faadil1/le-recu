@@ -1,0 +1,43 @@
+name: LE REÇU V1.6 — Same-Sheet Rive & Live Neon QA
+# Fixed immutable target: Preview-only staging; never a production domain.
+on:
+  push:
+    branches:
+      - feature/second-impression-v1-6
+    paths:
+      - .github/workflows/live-v1-6-second-impression.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  real-duplex:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    env:
+      LIVE_BETA_URL: https://le-recu-invite-beta-vkmqy3h7h-faadil1s-projects.vercel.app/
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm run rive:check
+      - run: npm run typecheck
+      - run: npm run test:product
+      - run: node --check scripts/live-beta-e2e.mjs
+      - run: node --check scripts/rive-paper-live-smoke.mjs
+      - run: npx playwright install --with-deps chromium
+      - name: Verify genuine hosted Rive selected-row visual and reduced-motion fallback
+        run: node scripts/rive-paper-live-smoke.mjs
+      - name: Verify real Neon FR to EN, canonical same-sheet verdict, export, outsider, erase and no stale deletion
+        run: node scripts/live-beta-e2e.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: le-recu-v1-6-rive-neon-same-sheet
+          path: |
+            playwright-artifacts/
+            playwright-artifacts-rive/
+          if-no-files-found: ignore
+          retention-days: 7
