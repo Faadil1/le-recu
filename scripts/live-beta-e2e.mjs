@@ -86,7 +86,7 @@ try {
   const textFromResponder=await b.evaluate(()=>navigator.clipboard.readText())
   assert.equal(textFromOwner,textFromResponder,"two roles export one canonical text receipt")
   assert.ok(textFromOwner.indexOf("01 / PREMIER REFUS")<textFromOwner.indexOf("02 / SECOND REFUS"))
-  assert.doesNotMatch(textFromOwner,/(^|\\n)(toi|eux) — /m)
+  assert.doesNotMatch(textFromOwner,/(?:toi|eux) — /i)
   // Reclose secondary options for consistent first-visit screenshots.
   for(const page of [a,b]) await page.locator(".aftercare-tools summary").click()
   // The outcome is now revealed INSIDE the sheet, before the marked rows;
