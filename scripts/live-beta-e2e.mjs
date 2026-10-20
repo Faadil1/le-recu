@@ -62,15 +62,27 @@ try {
 
   // Confirm the actual first/second positions have a canonical, owner-independent
   // ordering in the exported artworks. Canvas PNG export uses the same roles.
+  // The same physical receipt has ONE canonical creator-first ordering,
+  // regardless of which participant is currently viewing it.
   const ownerFirst=await a.locator(".duplex-first .duplex-cost").innerText()
-  const responderFirst=await b.locator(".duplex-second .duplex-cost").innerText()
-  assert.ok(ownerFirst.trim().length>2)
+  const ownerSecond=await a.locator(".duplex-second .duplex-cost").innerText()
+  const responderFirst=await b.locator(".duplex-first .duplex-cost").innerText()
+  assert.ok(ownerFirst.trim().length>2 && ownerSecond.trim().length>2)
   assert.ok(responderFirst.trim().length>2)
-  assert.notEqual(ownerFirst,responderFirst,"the browser languages must be independently presented")
+  assert.notEqual(ownerFirst,responderFirst,"both browser languages are independent")
   await b.getByRole("button",{name:"FR",exact:true}).click()
-  assert.equal((await b.locator(".duplex-second .duplex-cost").innerText()).trim(),ownerFirst.trim())
-  assert.equal((await b.locator(".duplex-first .duplex-cost").innerText()).trim(),
-    (await a.locator(".duplex-second .duplex-cost").innerText()).trim())
+  assert.equal((await b.locator(".duplex-first .duplex-cost").innerText()).trim(),ownerFirst.trim())
+  assert.equal((await b.locator(".duplex-second .duplex-cost").innerText()).trim(),ownerSecond.trim())
+  // The outcome is now revealed INSIDE the sheet, before the marked rows;
+  // no separate detached receipt or below-the-fold only outcome.
+  for(const page of [a,b]){
+    const summary=await page.locator("[data-duplex-reveal]").boundingBox()
+    const rows=await page.locator(".ink-host").boundingBox()
+    assert.ok(summary && rows && summary.y<rows.y,"second impression must be above marked rows on same paper")
+    assert.equal(await page.locator("[data-duplex-reveal] .duplex-imprint").count(),1)
+    assert.equal(await page.locator(".aftercare-tools").count(),1)
+    assert.equal(await page.locator(".aftercare-tools").getAttribute("open"),null,"secondary sharing tools start folded")
+  }
   await b.getByRole("button",{name:"EN",exact:true}).click()
   mkdirSync("playwright-artifacts",{recursive:true})
   await a.screenshot({path:"playwright-artifacts/duplex-fr-mobile.png",fullPage:true})
