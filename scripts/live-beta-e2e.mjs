@@ -122,7 +122,12 @@ try {
       const erase=a.getByRole("button",{name:"Effacer ce défi"})
       if (await erase.count()) await erase.click({timeout:12000})
       await a.getByText("Défi supprimé de la base.",{exact:false}).waitFor({state:"visible",timeout:25000})
-      console.log("E2E teardown: server-confirmed participant-authorized erasure.")
+      // The observed V1.5 trust bug: an old deletion message must never
+      // remain alongside an active/new choice.
+      await a.locator(".line-btn").first().click()
+      assert.equal(await a.getByText("Défi supprimé de la base.",{exact:false}).count(),0,
+        "past deletion confirmation must be cleared when the next choice begins")
+      console.log("E2E teardown: server-confirmed participant-authorized erasure and no stale notice on next choice.")
     } catch(error) {
       console.warn("E2E teardown unverified; manually inspect staging test duel. Do not assume it was deleted.",error instanceof Error?error.message:"unknown")
     }
