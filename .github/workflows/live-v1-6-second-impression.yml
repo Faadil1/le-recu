@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 18
     env:
-      LIVE_BETA_URL: https://le-recu-invite-beta-vkmqy3h7h-faadil1s-projects.vercel.app/
+      LIVE_BETA_URL: https://le-recu-invite-beta-79v0u89wu-faadil1s-projects.vercel.app/
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
